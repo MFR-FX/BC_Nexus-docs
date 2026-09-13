@@ -1,0 +1,10 @@
+{
+  "value": [
+    { "code": "XTA", "description": "Testwaehrung Alpha", "isoCode": "XTA" },
+    { "code": "XTB", "description": "Testwaehrung Bravo", "isoCode": "XTB" }
+  ],
+  "pageSize": 2,
+  "hasMore": true,
+  "nextPageToken": "PLATZHALTER-TOKEN-AUS-DER-ECHTEN-ANTWORT-UEBERNEHMEN",
+  "count": 4
+}

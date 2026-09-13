@@ -1,0 +1,4 @@
+{
+  "interfaceCode": "CURRENCYSEND",
+  "requestData": "{\"filter\":[{\"key\":\"code\",\"op\":\"startsWith\",\"value\":\"XT\"}],\"page\":{\"size\":100}}"
+}

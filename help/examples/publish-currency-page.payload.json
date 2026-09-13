@@ -1,0 +1,7 @@
+{
+  "filter": [
+    { "key": "code", "op": "startsWith", "value": "XT" }
+  ],
+  "page": { "size": 2 },
+  "includeCount": true
+}

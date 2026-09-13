@@ -1,0 +1,5 @@
+{
+  "filter": [
+    { "key": "symbol", "op": "eq", "value": "X" }
+  ]
+}

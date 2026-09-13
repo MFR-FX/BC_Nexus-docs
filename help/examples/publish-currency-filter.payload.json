@@ -1,0 +1,6 @@
+{
+  "filter": [
+    { "key": "code", "op": "startsWith", "value": "XT" }
+  ],
+  "includeCount": true
+}

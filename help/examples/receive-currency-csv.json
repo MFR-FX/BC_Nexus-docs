@@ -1,0 +1,4 @@
+{
+  "interfaceCode": "CURRENCYCSV",
+  "requestData": "code;description;isoCode\nXTA;Testwaehrung Alpha;XTA\nXTB;\"Test B; Variante \"\"Nord\"\"\";XTB\nXTC;Testwaehrung Charlie;XTC\n"
+}

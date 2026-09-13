@@ -1,0 +1,4 @@
+{
+  "interfaceCode": "CURRENCYPUBLISH",
+  "requestData": "{\"filter\":[{\"key\":\"code\",\"op\":\"startsWith\",\"value\":\"XT\"}],\"includeCount\":true}"
+}

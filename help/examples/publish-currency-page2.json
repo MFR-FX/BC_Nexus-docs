@@ -1,0 +1,4 @@
+{
+  "interfaceCode": "CURRENCYPUBLISH",
+  "requestData": "{\"filter\":[{\"key\":\"code\",\"op\":\"startsWith\",\"value\":\"XT\"}],\"page\":{\"size\":2,\"token\":\"PLATZHALTER-TOKEN-AUS-DER-ECHTEN-ANTWORT-UEBERNEHMEN\"},\"includeCount\":true}"
+}

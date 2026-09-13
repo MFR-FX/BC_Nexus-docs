@@ -1,0 +1,4 @@
+{
+  "interfaceCode": "CURRENCYIMPORT",
+  "requestData": "{\"code\":\"XTS\",\"description\":\"Testwaehrung XTS\",\"isoCode\":\"XTS\"}"
+}

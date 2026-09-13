@@ -1,0 +1,17 @@
+[
+  {
+    "code": "XTA",
+    "description": "Testwaehrung Alpha",
+    "isoCode": "XTA"
+  },
+  {
+    "code": "XTB",
+    "description": "Testwaehrung Bravo",
+    "isoCode": "XTB"
+  },
+  {
+    "code": "XTC",
+    "description": "Testwaehrung Charlie",
+    "isoCode": "XTC"
+  }
+]
