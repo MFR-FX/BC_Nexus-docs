@@ -5,7 +5,7 @@ permalink: /help/api-reference/
 
 # BC Nexus — API Reference
 
-_Web service contract for Codeunit 50100 "BCNX Nexus Webservice"._
+_Web service contract for Codeunit 50100 "FXNI Nexus Webservice"._
 
 External systems interact with BC Nexus through standard BC web service mechanisms (OData v4 or SOAP). Before any external call can reach BC Nexus, you must manually publish Codeunit 50100 on the BC **Web Services** page — this step is not performed automatically on install (BC Online does not allow programmatic web service registration from within an extension).
 
@@ -31,7 +31,7 @@ Codeunit 50100 must be published manually on the BC **Web Services** page before
 2. Choose **New**
 3. Set **Object Type** to `Codeunit`
 4. Set **Object ID** to `50100`
-5. Set **Service Name** to `BCNXNexusWebservice`
+5. Set **Service Name** to `FXNINexusWebservice`
 6. Enable the **Published** checkbox
 
 The row will appear in the list with a generated OData URL. Repeat this step in every environment (sandbox, production) and after any reinstall that removes the existing entry.
@@ -40,7 +40,7 @@ The row will appear in the list with a generated OData URL. Repeat this step in 
 
 Base URL pattern (BC Online):
 ```
-https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environment}/ODataV4/Company('{companyName}')/BCNXNexusWebservice
+https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environment}/ODataV4/Company('{companyName}')/FXNINexusWebservice
 ```
 
 ### The parameter names on the wire are not the AL parameter names
@@ -53,7 +53,7 @@ OData exposes an AL parameter with its **first letter lowercased**. The AL signa
 ```
 
 `"InterfaceCode"` answers `HTTP 400 BadRequest` with *"The parameter 'InterfaceCode' in the
-request payload is not a valid parameter for the operation 'BCNXNexusWebservice_Receive'."*
+request payload is not a valid parameter for the operation 'FXNINexusWebservice_Receive'."*
 The AL signatures below are written the way AL spells them, because that is what an AL caller
 uses; every one of them is lowercased at the first letter on the wire.
 
@@ -65,11 +65,11 @@ entirely — there is no error to see, the operation simply does not exist.
 
 | OData action | Parameters on the wire |
 |---|---|
-| `BCNXNexusWebservice_Receive` | `interfaceCode`, `requestData` |
-| `BCNXNexusWebservice_Send` | `interfaceCode` |
-| `BCNXNexusWebservice_SendWithOptions` | `interfaceCode`, `requestData` |
-| `BCNXNexusWebservice_Publish` | `interfaceCode`, `requestData` |
-| `BCNXNexusWebservice_ReceiveAttachment` | `interfaceCode`, `recordKey`, `attachmentName`, `contentType`, `fileExtension`, `base64Content` |
+| `FXNINexusWebservice_Receive` | `interfaceCode`, `requestData` |
+| `FXNINexusWebservice_Send` | `interfaceCode` |
+| `FXNINexusWebservice_SendWithOptions` | `interfaceCode`, `requestData` |
+| `FXNINexusWebservice_Publish` | `interfaceCode`, `requestData` |
+| `FXNINexusWebservice_ReceiveAttachment` | `interfaceCode`, `recordKey`, `attachmentName`, `contentType`, `fileExtension`, `base64Content` |
 
 The first four rows were verified against the published service's `$metadata`.
 `SendWithOptions` is new in this version and has **not** been read back from a running
@@ -228,7 +228,9 @@ parameter list, and keeps sending the whole configured set.
 
 **What did change is the shape of the outbound payload.** Until this version the body POSTed to
 the endpoint was a bare JSON array. It is now the envelope object, on `Send` as on `Publish`.
-A receiving system written against the array reads `value` instead of the body root.
+A receiving system written against the array reads `value` instead of the body root — or, for a
+partner system whose inbound format is fixed to the array, sends `"envelope": false` over `SendWithOptions` to keep
+getting the bare array. See [Response envelope](#response-envelope-send--publish).
 
 **Errors:**
 - Interface not found / blocked → Error
@@ -333,6 +335,7 @@ paging wish, the interface's own configuration and nothing else.
 | `page.size` | Integer | the interface's Max Page Size | How many records this call may return. Never more than the interface's maximum |
 | `page.token` | Text | none | Continuation token from a previous answer's `nextPageToken` |
 | `includeCount` | Boolean | `false` | When true, `count` in the answer is the size of the filtered set |
+| `envelope` | Boolean | `true` | When false, the answer/payload is the bare array of rows; refused together with paging or `includeCount` |
 
 **An unknown member at the top level is ignored**, so a newer caller keeps working against an
 older installation. `includeLines` is the first such member: it is read and has no effect in this
@@ -494,6 +497,15 @@ one it got.
 `value` is always an array and always present, including on an interface with no matching records
 and including when `hasMore` is true. Nothing else appears at the top level of the envelope in
 this version.
+
+**The envelope is the default and can be switched off per call.** Sending `"envelope": false`
+in the options object turns the answer/payload into the bare array of rows — `value` and nothing
+around it — for a partner system whose inbound format is fixed to that shape. Applies to `Send`
+as on `Publish` alike, since both build their outgoing payload through the same envelope builder.
+Paging and `count` are unavailable without the envelope, so `"envelope": false` combined with a
+`page` or with `"includeCount": true` is refused rather than silently dropping the option: a bare
+array has no place for `hasMore`, `nextPageToken` or `count`, and a short array that looks
+complete is exactly the failure the envelope exists to prevent.
 
 ---
 

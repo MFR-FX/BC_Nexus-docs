@@ -41,7 +41,7 @@ BC Online does not allow an extension to register web services programmatically.
 |-------|-------|
 | Object Type | `Codeunit` |
 | Object ID | `50100` |
-| Service Name | `BCNXNexusWebservice` |
+| Service Name | `FXNINexusWebservice` |
 | Published | ✓ (enable the checkbox) |
 
 4. Confirm the row appears in the list with an OData URL — this confirms the service is live.
@@ -56,17 +56,17 @@ BC Nexus ships three permission sets. Assign exactly one per user or account —
 
 | Permission Set | Caption | Assign to | What it can do |
 |---|---|---|---|
-| `BCNX Nexus Admin` | BC Nexus Admin | The person who sets BC Nexus up and keeps it running | Everything: setup, endpoints, interfaces, field mappings, and the operational actions on the transaction journal. It is also the only set that can register or replace endpoint credentials. |
-| `BCNX Nexus User` | BC Nexus User | The business user who works with the results | Reads the configuration and the transaction journal; can retry a failed transaction. Cannot trigger an interface directly. |
-| `BCNX Nexus Integr.` | BC Nexus Integration | The technical account a foreign system authenticates as when it calls the published web service | Calls the web service. No user interface, no configuration changes. |
+| `FXNI Nexus Admin` | BC Nexus Admin | The person who sets BC Nexus up and keeps it running | Everything: setup, endpoints, interfaces, field mappings, and the operational actions on the transaction journal. It is also the only set that can register or replace endpoint credentials. |
+| `FXNI Nexus User` | BC Nexus User | The business user who works with the results | Reads the configuration and the transaction journal; can retry a failed transaction. Cannot trigger an interface directly. |
+| `FXNI Nexus Integr.` | BC Nexus Integration | The technical account a foreign system authenticates as when it calls the published web service | Calls the web service. No user interface, no configuration changes. |
 
 A few points worth knowing before you assign these:
 
-- **`BCNX Nexus User` cannot use the "Process Manually" action.** That action re-runs the interface immediately — for a Send interface, that includes the outbound call with the stored endpoint credentials, which this role must never trigger directly. If a business user needs to retry a failed transaction, they use **Reset Status** instead: it only resets the transaction to Open, without running anything. The job queue then reprocesses it under its own account (typically an account with `BCNX Nexus Admin` or `BCNX Nexus Integr.`).
-- **`BCNX Nexus Integr.` is for the technical account, not for a person.** It grants no page access at all — nothing of BC Nexus is visible if someone signs in interactively with it. Use it for the S2S application registration or service user that the external system authenticates as when it calls the web service.
-- **Why the split matters:** whoever can execute the web service codeunit can trigger any Send interface for any interface code — including the endpoint credentials stored for it, which they never see directly. That authorization is not visible on the endpoint or interface record itself, so assign `BCNX Nexus Integr.` only to the technical account that is meant to call the web service, never to a person as a shortcut.
+- **`FXNI Nexus User` cannot use the "Process Manually" action.** That action re-runs the interface immediately — for a Send interface, that includes the outbound call with the stored endpoint credentials, which this role must never trigger directly. If a business user needs to retry a failed transaction, they use **Reset Status** instead: it only resets the transaction to Open, without running anything. The job queue then reprocesses it under its own account (typically an account with `FXNI Nexus Admin` or `FXNI Nexus Integr.`).
+- **`FXNI Nexus Integr.` is for the technical account, not for a person.** It grants no page access at all — nothing of BC Nexus is visible if someone signs in interactively with it. Use it for the S2S application registration or service user that the external system authenticates as when it calls the web service.
+- **Why the split matters:** whoever can execute the web service codeunit can trigger any Send interface for any interface code — including the endpoint credentials stored for it, which they never see directly. That authorization is not visible on the endpoint or interface record itself, so assign `FXNI Nexus Integr.` only to the technical account that is meant to call the web service, never to a person as a shortcut.
 
-**Setting up the calling account itself is a Business Central / Entra ID task, not a BC Nexus one.** An external system authenticates to the web service through Business Central's own OAuth 2.0 client-credentials flow: an Entra ID (Azure AD) app registration with a client secret, granted the Business Central API permission, and mapped to a Business Central user. Once that user exists, assign it the `BCNX Nexus Integr.` permission set above — BC Nexus does not create or manage the app registration itself.
+**Setting up the calling account itself is a Business Central / Entra ID task, not a BC Nexus one.** An external system authenticates to the web service through Business Central's own OAuth 2.0 client-credentials flow: an Entra ID (Azure AD) app registration with a client secret, granted the Business Central API permission, and mapped to a Business Central user. Once that user exists, assign it the `FXNI Nexus Integr.` permission set above — BC Nexus does not create or manage the app registration itself.
 
 ---
 
@@ -429,7 +429,7 @@ These actions are additive page extensions and can be customized in BC's own pag
 Before removing the extension:
 
 1. On the **BC Nexus Setup** page, disable **Auto. Process Transactions**. This removes the Job
-   Queue Entry that runs Codeunit 50101 (`BCNX Txn. Proc. Job`) on a schedule — an entry left
+   Queue Entry that runs Codeunit 50101 (`FXNI Txn. Proc. Job`) on a schedule — an entry left
    behind keeps firing after the extension is gone and errors on every run.
 2. Check for a Job Queue Entry pointing at Codeunit 50101 directly (search **Job Queue Entries**,
    filter Object Type to Run = Codeunit and Object ID to Run = 50101) in case one was created

@@ -5,7 +5,7 @@ permalink: /help/developer-guide/
 
 # BC Nexus Developer Guide
 
-**Publisher:** fx-its | **Prefix:** BCNX | **ID Range:** 50100–51299  
+**Publisher:** fx-its | **Prefix:** FXNI | **ID Range:** 50100–51299  
 **BC Version:** 27.0 (Runtime 16) | **Target:** Cloud (SaaS-first)
 
 ---
@@ -53,7 +53,7 @@ Everything else — including authentication, HTTP transport, retry scheduling, 
 
 ## 2. Data Model Reference
 
-### Table 50100 "BCNX Nexus Setup"
+### Table 50100 "FXNI Nexus Setup"
 
 Single-row configuration table. PK is always `'SETUP'`.
 
@@ -65,7 +65,7 @@ Single-row configuration table. PK is always `'SETUP'`.
 | Enable Attachment Storage | Boolean | Master switch for attachment-mode interfaces. |
 | Max Attachment Size (KB) | Integer | Maximum allowed attachment size. 0 = unlimited. |
 
-### Table 50102 "BCNX Nexus Interface Def."
+### Table 50102 "FXNI Nexus Interface Def."
 
 One row per configured interface.
 
@@ -75,17 +75,17 @@ One row per configured interface.
 | Description | Text[250] | Human-readable description. |
 | Table No. | Integer | The BC table this interface reads from or writes to. |
 | Table Name | Text[50] | Filled automatically from Table No. Read-only. |
-| Interface Type | Enum "BCNX Interface Type" | `Receive`, `Send`, or `Publish`. |
+| Interface Type | Enum "FXNI Interface Type" | `Receive`, `Send`, or `Publish`. |
 | Blocked | Boolean | When true, all calls to this interface raise an error immediately. |
-| Field Mapping Type | Enum "BCNX Field Mapping Type" | `JSON` or `CSV`. |
-| CSV Delimiter | Enum "BCNX CSV Delimiter" | `Comma` (default), `Semicolon`, `Tab`, or `Pipe`. Column separator for a Receive interface's CSV payload. Only used when Field Mapping Type is CSV; a delimiter inside a double-quoted value does not separate columns. |
+| Field Mapping Type | Enum "FXNI Field Mapping Type" | `JSON` or `CSV`. |
+| CSV Delimiter | Enum "FXNI CSV Delimiter" | `Comma` (default), `Semicolon`, `Tab`, or `Pipe`. Column separator for a Receive interface's CSV payload. Only used when Field Mapping Type is CSV; a delimiter inside a double-quoted value does not separate columns. |
 | CSV Has Header Row | Boolean | When true, the first non-empty line of the incoming CSV file is treated as column headers and skipped — it is not imported as a record. Only used when Field Mapping Type is CSV. |
 | Always Create New Entries | Boolean | When true, every received transaction inserts a new record. No PK lookup is performed. |
 | Entry Based Table | Boolean | For tables with auto-increment PKs (e.g. G/L Entry). Receive always inserts; Send/Publish omit the PK from the outbound payload. |
-| Endpoint Code | Code[20] | FK to "BCNX Nexus Endpoint Definition". Required for Send and Publish. |
+| Endpoint Code | Code[20] | FK to "FXNI Nexus Endpoint Definition". Required for Send and Publish. |
 | Attachment Mode | Boolean | When true (Receive only), the transaction stores a file rather than writing to table fields. |
 
-### Table 50103 "BCNX Nexus Endpoint Definition"
+### Table 50103 "FXNI Nexus Endpoint Definition"
 
 One row per external HTTP endpoint.
 
@@ -94,10 +94,10 @@ One row per external HTTP endpoint.
 | Code | Code[20] | PK. |
 | Description | Text[250] | Human-readable description. |
 | Endpoint URL | Text[250] | Target URL for outbound requests. |
-| Authentication Type | Enum "BCNX Authentication Type" | `None`, `Basic Auth`, or `OAuth 2.0`. |
+| Authentication Type | Enum "FXNI Authentication Type" | `None`, `Basic Auth`, or `OAuth 2.0`. |
 | Client ID | Text[250] | OAuth client ID. |
 | Token URL | Text[250] | OAuth token endpoint. |
-| OAuth Auth Type | Enum "BCNX OAuth Auth Type" | `Client Credentials` — the only value the enum defines. Read and enforced by `AcquireOAuthToken`: an unhandled value raises an error instead of being ignored. |
+| OAuth Auth Type | Enum "FXNI OAuth Auth Type" | `Client Credentials` — the only value the enum defines. Read and enforced by `AcquireOAuthToken`: an unhandled value raises an error instead of being ignored. |
 | HTTP Timeout (ms) | Integer | Request timeout in ms for this endpoint, applied by `SendRequest` and `AcquireOAuthToken` alike. `0` = platform default, otherwise 1000–300000 (`OnValidate` enforces the range; `ApplyTimeout` re-checks it before use). Defaults to 30000 on new records. |
 | Token Expires At | DateTime | Cached token expiry. Managed automatically. Read-only. |
 | Token Request Body | Blob | JSON body sent to Token URL. Written via `SetTokenRequestBody()`. |
@@ -106,13 +106,13 @@ One row per external HTTP endpoint.
 | Client Secret | IsolatedStorage | Set via `SetClientSecret()`. Never stored in a table field. |
 | Access Token | IsolatedStorage | Managed automatically. Retrieved via `GetAccessToken()`. |
 
-### Table 50104 "BCNX Nexus Field Map Def."
+### Table 50104 "FXNI Nexus Field Map Def."
 
 One row per field mapping. Composite PK: `Interface Definition Code` + `Position`.
 
 | Field | Type | Purpose |
 |---|---|---|
-| Interface Definition Code | Code[20] | FK to "BCNX Nexus Interface Def." |
+| Interface Definition Code | Code[20] | FK to "FXNI Nexus Interface Def." |
 | Position | Integer | Ordering key. For CSV, determines column position (1-based). |
 | Field Mapping Type | Enum (FlowField) | Inherited from the interface definition. |
 | Interface Type | Enum (FlowField) | Inherited from the interface definition. |
@@ -125,7 +125,7 @@ One row per field mapping. Composite PK: `Interface Definition Code` + `Position
 | Validate Field | Boolean | Calls `FieldRef.Validate()` after assignment, triggering the table field's `OnValidate`. |
 | Skip If Empty | Boolean | Skips this field entirely when sending/publishing if the value is empty. |
 
-### Table 50105 "BCNX Nexus Transaction List"
+### Table 50105 "FXNI Nexus Transaction List"
 
 One row per transaction, regardless of direction.
 
@@ -135,7 +135,7 @@ One row per transaction, regardless of direction.
 | Interface Definition Code | Code[20] | Which interface owns this transaction. |
 | Interface Type | Enum | Snapshot of the interface type at creation time. Preserved even if the interface is later deleted. |
 | Transaction Datetime | DateTime | Set automatically on insert. |
-| Status | Enum "BCNX Transaction Status" | `Open`, `Error`, `Processed`, or `Canceled`. |
+| Status | Enum "FXNI Transaction Status" | `Open`, `Error`, `Processed`, or `Canceled`. |
 | No. Of Remaining Tries | Integer | Decremented on each failure. When it reaches 0, Status becomes Error. |
 | Next Try At DateTime | DateTime | Job queue only processes this transaction after this datetime. |
 | Request | Blob | The raw JSON or CSV payload. Read via `GetRequest()`. |
@@ -146,7 +146,7 @@ One row per transaction, regardless of direction.
 | External Message Id | Text[100] | Message identifier from the originating external system. |
 | Contract Version | Code[20] | Caller-declared API contract version. |
 
-### Table 50106 "BCNX Nexus Attachment"
+### Table 50106 "FXNI Nexus Attachment"
 
 One row per attachment received through an attachment-mode interface.
 
@@ -156,7 +156,7 @@ One row per attachment received through an attachment-mode interface.
 | Table No. | Integer | BC table the attachment belongs to. |
 | Record Key | Text[250] | Pipe-delimited primary key of the parent record. |
 | Attachment Name | Text[250] | File name or descriptive name. |
-| Storage Location | Enum "BCNX Attach. Store" | `Local` or `External`. |
+| Storage Location | Enum "FXNI Attach. Store" | `Local` or `External`. |
 | Attachment Content | Blob | Binary content when Storage Location is Local. |
 | Content Type | Text[100] | MIME type (e.g. `application/pdf`). |
 | File Extension | Text[20] | e.g. `.pdf`, `.xlsx`. |
@@ -174,7 +174,7 @@ Understanding the lifecycle is essential for placing your subscriber code correc
 ### Receive flow
 
 ```
-Caller → Codeunit 50100 "BCNX Nexus Webservice"
+Caller → Codeunit 50100 "FXNI Nexus Webservice"
   .Receive() / .ReceiveAndGetTransactionEntryNo() / .ReceiveWithMetadata()
     → OnBeforeReceive                          [event — can short-circuit]
     → Idempotency check (suppress duplicate if key matches)
@@ -182,7 +182,7 @@ Caller → Codeunit 50100 "BCNX Nexus Webservice"
     → OnAfterReceive                           [event]
     → Return (transaction is queued, not yet processed)
 
-Job Queue → Codeunit 50101 "BCNX Txn. Proc. Job"
+Job Queue → Codeunit 50101 "FXNI Txn. Proc. Job"
   → Finds Open/Error transactions where Next Try At <= now
   → Codeunit.Run(50102, TransactionRec) for each
     → OnBeforeProcessTransaction               [event — can short-circuit]
@@ -211,7 +211,7 @@ Job Queue → Codeunit 50101 "BCNX Txn. Proc. Job"
 ### Send flow
 
 ```
-Caller → Codeunit 50100 "BCNX Nexus Webservice"
+Caller → Codeunit 50100 "FXNI Nexus Webservice"
   .Send()
     → Insert Transaction record (Status = Open)
     → Codeunit.Run(50102, TransactionRec) — synchronous
@@ -241,23 +241,23 @@ BC Nexus exposes events across three codeunits. They are grouped below by codeun
 
 ### Namespaces and `using` directives
 
-BC Nexus objects are organized into namespaces under `FxIts.BCNexus`. A subscriber object only sees a BC Nexus object it references — the publisher codeunit named in the `[EventSubscriber]` attribute, or a parameter type such as `Record "BCNX Nexus Transaction List"` — if it declares a matching `using` directive. This applies even when only a single type is referenced from a given namespace.
+BC Nexus objects are organized into namespaces under `FxIts.BCNexus`. A subscriber object only sees a BC Nexus object it references — the publisher codeunit named in the `[EventSubscriber]` attribute, or a parameter type such as `Record "FXNI Nexus Transaction List"` — if it declares a matching `using` directive. This applies even when only a single type is referenced from a given namespace.
 
 | Namespace | Contains (among others) |
 |---|---|
-| `FxIts.BCNexus` | BCNX Nexus Install, BCNX Nexus Upgrade, BCNX Nexus Record Key Mgt., all three permission sets |
-| `FxIts.BCNexus.Setup` | Table and page "BCNX Nexus Setup", BCNX Nexus Setup Management |
-| `FxIts.BCNexus.Interfaces` | "BCNX Nexus Interface Def.", "BCNX Nexus Field Map Def.", the enums "BCNX Interface Type" and "BCNX Field Mapping Type", the interface and field mapping pages |
-| `FxIts.BCNexus.Transport` | "BCNX Nexus Endpoint Definition", the enums "BCNX Authentication Type" and "BCNX OAuth Auth Type", "BCNX Nexus HTTP Handler" |
-| `FxIts.BCNexus.Transactions` | "BCNX Nexus Transaction List", the enum "BCNX Transaction Status", "BCNX Nexus Webservice", "BCNX Txn. Proc. Job", "BCNX Txn. Processing" |
-| `FxIts.BCNexus.Attachments` | "BCNX Nexus Attachment", the enum "BCNX Attach. Store", "BCNX Attach. Processing", the ten page extensions |
+| `FxIts.BCNexus` | FXNI Nexus Install, FXNI Nexus Upgrade, FXNI Nexus Record Key Mgt., all three permission sets |
+| `FxIts.BCNexus.Setup` | Table and page "FXNI Nexus Setup", FXNI Nexus Setup Management |
+| `FxIts.BCNexus.Interfaces` | "FXNI Nexus Interface Def.", "FXNI Nexus Field Map Def.", the enums "FXNI Interface Type" and "FXNI Field Mapping Type", the interface and field mapping pages |
+| `FxIts.BCNexus.Transport` | "FXNI Nexus Endpoint Definition", the enums "FXNI Authentication Type" and "FXNI OAuth Auth Type", "FXNI Nexus HTTP Handler" |
+| `FxIts.BCNexus.Transactions` | "FXNI Nexus Transaction List", the enum "FXNI Transaction Status", "FXNI Nexus Webservice", "FXNI Txn. Proc. Job", "FXNI Txn. Processing" |
+| `FxIts.BCNexus.Attachments` | "FXNI Nexus Attachment", the enum "FXNI Attach. Store", "FXNI Attach. Processing", the ten page extensions |
 | `FxIts.BCNexus.Test` | The test codeunit and the HTTP mock |
 
 The subscriber stubs below are shown as standalone procedures, without the surrounding `using` directives of their host codeunit. Add the ones your subscriber object needs based on the table above; Section 5 shows this in full, working examples.
 
 ---
 
-### 4.1 Codeunit 50100 "BCNX Nexus Webservice"
+### 4.1 Codeunit 50100 "FXNI Nexus Webservice"
 
 #### `OnBeforeReceive`
 
@@ -279,7 +279,7 @@ The subscriber stubs below are shown as standalone procedures, without the surro
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Nexus Webservice", 'OnBeforeReceive', '', false, false)]
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Nexus Webservice", 'OnBeforeReceive', '', false, false)]
 local procedure OnBeforeReceive(InterfaceCode: Code[20]; var RequestData: Text; var IsHandled: Boolean)
 begin
     // Your logic here.
@@ -297,7 +297,7 @@ end;
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
 | InterfaceCode | in | Code[20] | The interface code. |
-| TransactionRec | var | Record "BCNX Nexus Transaction List" | The newly created, unprocessed transaction. Status is `Open`. |
+| TransactionRec | var | Record "FXNI Nexus Transaction List" | The newly created, unprocessed transaction. Status is `Open`. |
 
 **Typical use cases:**
 - Trigger immediate synchronous processing instead of waiting for the job queue.
@@ -306,8 +306,8 @@ end;
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Nexus Webservice", 'OnAfterReceive', '', false, false)]
-local procedure OnAfterReceive(InterfaceCode: Code[20]; var TransactionRec: Record "BCNX Nexus Transaction List")
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Nexus Webservice", 'OnAfterReceive', '', false, false)]
+local procedure OnAfterReceive(InterfaceCode: Code[20]; var TransactionRec: Record "FXNI Nexus Transaction List")
 begin
     // Your logic here.
 end;
@@ -315,7 +315,7 @@ end;
 
 ---
 
-### 4.2 Codeunit 50102 "BCNX Txn. Processing"
+### 4.2 Codeunit 50102 "FXNI Txn. Processing"
 
 #### `OnBeforeProcessTransaction`
 
@@ -326,7 +326,7 @@ end;
 
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
-| TransactionRec | var | Record "BCNX Nexus Transaction List" | The transaction about to be processed. |
+| TransactionRec | var | Record "FXNI Nexus Transaction List" | The transaction about to be processed. |
 | IsHandled | var | Boolean | Set to `true` to bypass all default processing for this transaction. |
 
 **Typical use cases:**
@@ -335,8 +335,8 @@ end;
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Txn. Processing", 'OnBeforeProcessTransaction', '', false, false)]
-local procedure OnBeforeProcessTransaction(var TransactionRec: Record "BCNX Nexus Transaction List"; var IsHandled: Boolean)
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Txn. Processing", 'OnBeforeProcessTransaction', '', false, false)]
+local procedure OnBeforeProcessTransaction(var TransactionRec: Record "FXNI Nexus Transaction List"; var IsHandled: Boolean)
 begin
     // Your logic here.
 end;
@@ -352,7 +352,7 @@ end;
 
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
-| TransactionRec | var | Record "BCNX Nexus Transaction List" | The successfully processed transaction. Status is `Processed`. |
+| TransactionRec | var | Record "FXNI Nexus Transaction List" | The successfully processed transaction. Status is `Processed`. |
 
 **Typical use cases:**
 - Emit telemetry on successful processing.
@@ -360,8 +360,8 @@ end;
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Txn. Processing", 'OnAfterProcessTransaction', '', false, false)]
-local procedure OnAfterProcessTransaction(var TransactionRec: Record "BCNX Nexus Transaction List")
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Txn. Processing", 'OnAfterProcessTransaction', '', false, false)]
+local procedure OnAfterProcessTransaction(var TransactionRec: Record "FXNI Nexus Transaction List")
 begin
     // Your logic here.
 end;
@@ -379,8 +379,8 @@ end;
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
 | RecRef | var | RecordRef | An initialized (but not yet populated) RecordRef over the target table. You can set field values directly via `RecRef.Field(fieldNo).Value(...)`. |
-| InterfaceDef | var | Record "BCNX Nexus Interface Def." | The interface definition. Use to check `InterfaceDef.Code`, `InterfaceDef."Table No."`, etc. |
-| TransactionRec | var | Record "BCNX Nexus Transaction List" | The current transaction. Use `TransactionRec.GetRequest()` to access the raw payload. |
+| InterfaceDef | var | Record "FXNI Nexus Interface Def." | The interface definition. Use to check `InterfaceDef.Code`, `InterfaceDef."Table No."`, etc. |
+| TransactionRec | var | Record "FXNI Nexus Transaction List" | The current transaction. Use `TransactionRec.GetRequest()` to access the raw payload. |
 
 **Typical use cases:**
 - Set fields that cannot be derived from the incoming payload, such as the current user's salesperson code, or a calculated default.
@@ -389,8 +389,8 @@ end;
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Txn. Processing", 'OnBeforeInsertRecord', '', false, false)]
-local procedure OnBeforeInsertRecord(var RecRef: RecordRef; var InterfaceDef: Record "BCNX Nexus Interface Def."; var TransactionRec: Record "BCNX Nexus Transaction List")
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Txn. Processing", 'OnBeforeInsertRecord', '', false, false)]
+local procedure OnBeforeInsertRecord(var RecRef: RecordRef; var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")
 begin
     // Your logic here.
 end;
@@ -407,8 +407,8 @@ end;
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
 | RecRef | var | RecordRef | The RecordRef of the record that was just inserted. |
-| InterfaceDef | var | Record "BCNX Nexus Interface Def." | The interface definition. |
-| TransactionRec | var | Record "BCNX Nexus Transaction List" | The current transaction. |
+| InterfaceDef | var | Record "FXNI Nexus Interface Def." | The interface definition. |
+| TransactionRec | var | Record "FXNI Nexus Transaction List" | The current transaction. |
 
 **Typical use cases:**
 - Post a follow-up document (e.g. release a sales order immediately after import).
@@ -417,8 +417,8 @@ end;
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Txn. Processing", 'OnAfterInsertRecord', '', false, false)]
-local procedure OnAfterInsertRecord(var RecRef: RecordRef; var InterfaceDef: Record "BCNX Nexus Interface Def."; var TransactionRec: Record "BCNX Nexus Transaction List")
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Txn. Processing", 'OnAfterInsertRecord', '', false, false)]
+local procedure OnAfterInsertRecord(var RecRef: RecordRef; var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")
 begin
     // Your logic here.
 end;
@@ -436,8 +436,8 @@ end;
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
 | RecRef | var | RecordRef | A RecordRef positioned on the existing record. |
-| InterfaceDef | var | Record "BCNX Nexus Interface Def." | The interface definition. |
-| TransactionRec | var | Record "BCNX Nexus Transaction List" | The current transaction. |
+| InterfaceDef | var | Record "FXNI Nexus Interface Def." | The interface definition. |
+| TransactionRec | var | Record "FXNI Nexus Transaction List" | The current transaction. |
 
 **Typical use cases:**
 - Prevent modification of specific fields on existing records (by resetting them after the field mappings run — use `OnAfterModifyRecord` for that pattern).
@@ -445,8 +445,8 @@ end;
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Txn. Processing", 'OnBeforeModifyRecord', '', false, false)]
-local procedure OnBeforeModifyRecord(var RecRef: RecordRef; var InterfaceDef: Record "BCNX Nexus Interface Def."; var TransactionRec: Record "BCNX Nexus Transaction List")
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Txn. Processing", 'OnBeforeModifyRecord', '', false, false)]
+local procedure OnBeforeModifyRecord(var RecRef: RecordRef; var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")
 begin
     // Your logic here.
 end;
@@ -463,8 +463,8 @@ end;
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
 | RecRef | var | RecordRef | The RecordRef of the record that was just modified. |
-| InterfaceDef | var | Record "BCNX Nexus Interface Def." | The interface definition. |
-| TransactionRec | var | Record "BCNX Nexus Transaction List" | The current transaction. |
+| InterfaceDef | var | Record "FXNI Nexus Interface Def." | The interface definition. |
+| TransactionRec | var | Record "FXNI Nexus Transaction List" | The current transaction. |
 
 **Typical use cases:**
 - Trigger post-modify business rules (re-calculate totals, update related records).
@@ -472,8 +472,8 @@ end;
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Txn. Processing", 'OnAfterModifyRecord', '', false, false)]
-local procedure OnAfterModifyRecord(var RecRef: RecordRef; var InterfaceDef: Record "BCNX Nexus Interface Def."; var TransactionRec: Record "BCNX Nexus Transaction List")
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Txn. Processing", 'OnAfterModifyRecord', '', false, false)]
+local procedure OnAfterModifyRecord(var RecRef: RecordRef; var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")
 begin
     // Your logic here.
 end;
@@ -492,7 +492,7 @@ end;
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
 | RecRef | var | RecordRef | The RecordRef being populated. You can read other fields on the record at this point. |
-| FieldMapping | - | Record "BCNX Nexus Field Map Def." | The field mapping line currently being processed, passed as a copy. Use `FieldMapping."Field No."`, `FieldMapping."Json Key"`, etc. to identify which field is being processed. |
+| FieldMapping | - | Record "FXNI Nexus Field Map Def." | The field mapping line currently being processed, passed as a copy. Use `FieldMapping."Field No."`, `FieldMapping."Json Key"`, etc. to identify which field is being processed. |
 | Value | var | Text | The string value about to be assigned. Modify this to transform the value before assignment. |
 
 `Value` is the only channel back into the assignment: the target `FieldRef` and the text to assign are resolved before this event fires, so changes made to `FieldMapping` — for example writing to `FieldMapping."Static Field Value"` — never reach the target field. That is why the parameter is passed as a copy rather than `var`: a subscriber that declares it as `var` fails to compile instead of silently having no effect.
@@ -504,8 +504,8 @@ end;
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Txn. Processing", 'OnBeforeValidateField', '', false, false)]
-local procedure OnBeforeValidateField(var RecRef: RecordRef; FieldMapping: Record "BCNX Nexus Field Map Def."; var Value: Text)
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Txn. Processing", 'OnBeforeValidateField', '', false, false)]
+local procedure OnBeforeValidateField(var RecRef: RecordRef; FieldMapping: Record "FXNI Nexus Field Map Def."; var Value: Text)
 begin
     // Your logic here.
 end;
@@ -522,8 +522,8 @@ end;
 
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
-| InterfaceDef | var | Record "BCNX Nexus Interface Def." | The interface definition. Use to read `InterfaceDef."Table No."` and `InterfaceDef.Code`. |
-| TransactionRec | var | Record "BCNX Nexus Transaction List" | The current transaction. |
+| InterfaceDef | var | Record "FXNI Nexus Interface Def." | The interface definition. Use to read `InterfaceDef."Table No."` and `InterfaceDef.Code`. |
+| TransactionRec | var | Record "FXNI Nexus Transaction List" | The current transaction. |
 | Payload | var | Text | Initially empty. Set this to a non-empty string to replace the default payload. |
 
 **Typical use cases:**
@@ -533,8 +533,8 @@ end;
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Txn. Processing", 'OnBeforeBuildSendPayload', '', false, false)]
-local procedure OnBeforeBuildSendPayload(var InterfaceDef: Record "BCNX Nexus Interface Def."; var TransactionRec: Record "BCNX Nexus Transaction List"; var Payload: Text)
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Txn. Processing", 'OnBeforeBuildSendPayload', '', false, false)]
+local procedure OnBeforeBuildSendPayload(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List"; var Payload: Text)
 begin
     // Your logic here.
 end;
@@ -542,7 +542,7 @@ end;
 
 ---
 
-### 4.3 Codeunit 50106 "BCNX Attach. Processing"
+### 4.3 Codeunit 50106 "FXNI Attach. Processing"
 
 These events are relevant only for attachment-mode Receive interfaces.
 
@@ -550,13 +550,13 @@ These events are relevant only for attachment-mode Receive interfaces.
 
 | Attribute | Value |
 |---|---|
-| Fires in | `ProcessSingleAttachment()`, before the `"BCNX Nexus Attachment"` record is created. |
+| Fires in | `ProcessSingleAttachment()`, before the `"FXNI Nexus Attachment"` record is created. |
 | Effect of `IsHandled := true` | The default attachment record creation and content storage are skipped entirely. |
 
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
-| InterfaceDef | var | Record "BCNX Nexus Interface Def." | The interface definition. |
-| TransactionRec | var | Record "BCNX Nexus Transaction List" | The current transaction. |
+| InterfaceDef | var | Record "FXNI Nexus Interface Def." | The interface definition. |
+| TransactionRec | var | Record "FXNI Nexus Transaction List" | The current transaction. |
 | RecordKeyValue | var | Text | The `recordKey` value from the payload. |
 | AttachmentName | var | Text | The `attachmentName` value from the payload. |
 | Base64Content | var | Text | The base64-encoded file content. |
@@ -570,9 +570,9 @@ These events are relevant only for attachment-mode Receive interfaces.
 
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
-| InterfaceDef | var | Record "BCNX Nexus Interface Def." | The interface definition. |
-| TransactionRec | var | Record "BCNX Nexus Transaction List" | The current transaction. |
-| Attachment | var | Record "BCNX Nexus Attachment" | The newly created attachment record. |
+| InterfaceDef | var | Record "FXNI Nexus Interface Def." | The interface definition. |
+| TransactionRec | var | Record "FXNI Nexus Transaction List" | The current transaction. |
+| Attachment | var | Record "FXNI Nexus Attachment" | The newly created attachment record. |
 
 #### `OnBeforeStoreContent`
 
@@ -583,7 +583,7 @@ These events are relevant only for attachment-mode Receive interfaces.
 
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
-| Attachment | var | Record "BCNX Nexus Attachment" | The attachment record (not yet modified with content). |
+| Attachment | var | Record "FXNI Nexus Attachment" | The attachment record (not yet modified with content). |
 | Base64Content | var | Text | The raw base64-encoded content. |
 | IsHandled | var | Boolean | Set to `true` to replace default local storage. |
 
@@ -598,7 +598,7 @@ These events are relevant only for attachment-mode Receive interfaces.
 
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
-| Attachment | var | Record "BCNX Nexus Attachment" | The attachment record. Check `Attachment."Storage Location"` to decide whether to intervene. |
+| Attachment | var | Record "FXNI Nexus Attachment" | The attachment record. Check `Attachment."Storage Location"` to decide whether to intervene. |
 | InStr | var | InStream | Provide a valid InStream over the content. |
 | IsHandled | var | Boolean | Set to `true` to replace the default local read. |
 
@@ -618,11 +618,11 @@ using FxIts.BCNexus.Transactions;
 
 codeunit 50200 "MyExt Sales Order Subscribers"
 {
-    [EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Txn. Processing", 'OnBeforeInsertRecord', '', false, false)]
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Txn. Processing", 'OnBeforeInsertRecord', '', false, false)]
     local procedure SetSalespersonOnSalesHeaderInsert(
         var RecRef: RecordRef;
-        var InterfaceDef: Record "BCNX Nexus Interface Def.";
-        var TransactionRec: Record "BCNX Nexus Transaction List")
+        var InterfaceDef: Record "FXNI Nexus Interface Def.";
+        var TransactionRec: Record "FXNI Nexus Transaction List")
     var
         SalespersonPurchaser: Record "Salesperson/Purchaser";
         UserSetup: Record "User Setup";
@@ -668,10 +668,10 @@ using FxIts.BCNexus.Transactions;
 
 codeunit 50201 "MyExt WMS Field Transforms"
 {
-    [EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Txn. Processing", 'OnBeforeValidateField', '', false, false)]
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Txn. Processing", 'OnBeforeValidateField', '', false, false)]
     local procedure TransformWmsDateFormat(
         var RecRef: RecordRef;
-        FieldMapping: Record "BCNX Nexus Field Map Def.";
+        FieldMapping: Record "FXNI Nexus Field Map Def.";
         var Value: Text)
     var
         Year: Text;
@@ -718,10 +718,10 @@ using FxIts.BCNexus.Transactions;
 
 codeunit 50202 "MyExt Customer Export Payload"
 {
-    [EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Txn. Processing", 'OnBeforeBuildSendPayload', '', false, false)]
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Txn. Processing", 'OnBeforeBuildSendPayload', '', false, false)]
     local procedure BuildCustomerExportPayload(
-        var InterfaceDef: Record "BCNX Nexus Interface Def.";
-        var TransactionRec: Record "BCNX Nexus Transaction List";
+        var InterfaceDef: Record "FXNI Nexus Interface Def.";
+        var TransactionRec: Record "FXNI Nexus Transaction List";
         var Payload: Text)
     var
         Customer: Record Customer;
@@ -776,9 +776,9 @@ using FxIts.BCNexus.Transactions;
 
 codeunit 50203 "MyExt Maintenance Gate"
 {
-    [EventSubscriber(ObjectType::Codeunit, Codeunit::"BCNX Txn. Processing", 'OnBeforeProcessTransaction', '', false, false)]
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Txn. Processing", 'OnBeforeProcessTransaction', '', false, false)]
     local procedure SkipDuringMaintenanceWindow(
-        var TransactionRec: Record "BCNX Nexus Transaction List";
+        var TransactionRec: Record "FXNI Nexus Transaction List";
         var IsHandled: Boolean)
     var
         MySetup: Record "MyExt Setup";
@@ -832,13 +832,13 @@ BC Nexus occupies IDs **50100–51299**. Your dependent extension must use an ID
 
 ### Object and field naming
 
-- Use your own prefix, not `BCNX`. The `BCNX` prefix is reserved for BC Nexus objects.
+- Use your own prefix, not `FXNI`. The `FXNI` prefix is reserved for BC Nexus objects.
 - Do not create table extensions on BC Nexus tables unless you have a clear technical need. BC Nexus tables are not part of the stable public API surface — their field structure may change between major versions.
 - Do not call `local procedure` members on BC Nexus codeunits. Only `procedure` (public) members are part of the supported API. See Section 7 for the full list.
 
 ### Permission sets in your extension
 
-Your extension's permission sets must include permissions for the BC Nexus objects that your code accesses. At minimum, a subscriber codeunit that reads `"BCNX Nexus Interface Def."` needs:
+Your extension's permission sets must include permissions for the BC Nexus objects that your code accesses. At minimum, a subscriber codeunit that reads `"FXNI Nexus Interface Def."` needs:
 
 ```al
 using FxIts.BCNexus.Interfaces;
@@ -848,13 +848,13 @@ permissionset 60100 "MyExt Permissions"
 {
     Assignable = true;
     Permissions =
-        tabledata "BCNX Nexus Interface Def." = R,
-        tabledata "BCNX Nexus Transaction List" = R,
-        codeunit "BCNX Txn. Processing" = X;
+        tabledata "FXNI Nexus Interface Def." = R,
+        tabledata "FXNI Nexus Transaction List" = R,
+        codeunit "FXNI Txn. Processing" = X;
 }
 ```
 
-If your subscribers also read `"BCNX Nexus Field Map Def."`, add `R` access to that table as well.
+If your subscribers also read `"FXNI Nexus Field Map Def."`, add `R` access to that table as well.
 
 ### File naming convention
 
@@ -873,7 +873,7 @@ Follow BC Nexus conventions for file names:
 
 Only `procedure` declarations (without the `local` modifier) are part of the supported public API. Calling `local procedure` members from outside BC Nexus is not supported and may break without notice.
 
-### Codeunit 50100 "BCNX Nexus Webservice"
+### Codeunit 50100 "FXNI Nexus Webservice"
 
 | Procedure | Signature | Description |
 |---|---|---|
@@ -888,25 +888,25 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 
 ---
 
-### Codeunit 50101 "BCNX Txn. Proc. Job"
+### Codeunit 50101 "FXNI Txn. Proc. Job"
 
 | Procedure | Signature | Description |
 |---|---|---|
-| ProcessOneTransaction | `procedure ProcessOneTransaction(var TransactionRec: Record "BCNX Nexus Transaction List")` | Processes exactly one already-positioned transaction and applies the resulting retry/error state transition — decrement the remaining tries, move to `Error` once exhausted, otherwise schedule the next attempt — persisting the result with `Modify()`. Contains **no** `Commit()`: the `Commit()` belongs to `OnRun`'s polling loop, so that one failing transaction does not roll back the successes of the same run. That makes this procedure safe to call from inside an ambient transaction, which `OnRun` itself is not. |
+| ProcessOneTransaction | `procedure ProcessOneTransaction(var TransactionRec: Record "FXNI Nexus Transaction List")` | Processes exactly one already-positioned transaction and applies the resulting retry/error state transition — decrement the remaining tries, move to `Error` once exhausted, otherwise schedule the next attempt — persisting the result with `Modify()`. Contains **no** `Commit()`: the `Commit()` belongs to `OnRun`'s polling loop, so that one failing transaction does not roll back the successes of the same run. That makes this procedure safe to call from inside an ambient transaction, which `OnRun` itself is not. |
 
 **Trigger:** `OnRun` selects due transactions (Status `Open` or `Error`, due at or before now, tries remaining) with `FindSet(false)` and calls `ProcessOneTransaction` for each. It commits **before** every record — not after — and once more after the loop. Committing first is what lets `ProcessOneTransaction` evaluate a `Codeunit.Run` return value: the AL runtime allows that only when no write transaction is open, and the error branch's `Modify()` of the previous record leaves one. The trailing commit exists because the last record is the only one the loop never commits.
 
 ---
 
-### Codeunit 50102 "BCNX Txn. Processing"
+### Codeunit 50102 "FXNI Txn. Processing"
 
 | Procedure | Signature | Description |
 |---|---|---|
-| ProcessTransaction | `procedure ProcessTransaction(var TransactionRec: Record "BCNX Nexus Transaction List"): Boolean` | Processes a single transaction record. Called by the job queue (Codeunit 50101) and by `Send()` / `Publish()`. Safe to call directly in tests or from custom job logic. |
-| ValidateSetup | `procedure ValidateSetup(var InterfaceDef: Record "BCNX Nexus Interface Def."; var TransactionRec: Record "BCNX Nexus Transaction List")` | Validates that the interface definition is complete and not blocked. Raises an error on any misconfiguration. |
-| ProcessReceive | `procedure ProcessReceive(var InterfaceDef: Record "BCNX Nexus Interface Def."; var TransactionRec: Record "BCNX Nexus Transaction List")` | Executes the Receive flow: parses the request, performs PK lookup, and inserts or modifies the target record. |
-| ProcessSend | `procedure ProcessSend(var InterfaceDef: Record "BCNX Nexus Interface Def."; var TransactionRec: Record "BCNX Nexus Transaction List")` | Executes the Send flow: builds the payload and HTTP-POSTs it to the endpoint. |
-| ProcessPublish | `procedure ProcessPublish(var InterfaceDef: Record "BCNX Nexus Interface Def."; var TransactionRec: Record "BCNX Nexus Transaction List")` | Executes the Publish flow: builds the payload and stores it in the transaction response. |
+| ProcessTransaction | `procedure ProcessTransaction(var TransactionRec: Record "FXNI Nexus Transaction List"): Boolean` | Processes a single transaction record. Called by the job queue (Codeunit 50101) and by `Send()` / `Publish()`. Safe to call directly in tests or from custom job logic. |
+| ValidateSetup | `procedure ValidateSetup(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Validates that the interface definition is complete and not blocked. Raises an error on any misconfiguration. |
+| ProcessReceive | `procedure ProcessReceive(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Executes the Receive flow: parses the request, performs PK lookup, and inserts or modifies the target record. |
+| ProcessSend | `procedure ProcessSend(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Executes the Send flow: builds the payload and HTTP-POSTs it to the endpoint. |
+| ProcessPublish | `procedure ProcessPublish(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Executes the Publish flow: builds the payload and stores it in the transaction response. |
 | ParseJsonToFieldRef | `procedure ParseJsonToFieldRef(JsonKey: Text; JsonData: JsonObject; var FRef: FieldRef; DataType: Text)` | Utility: resolves a JSON key (case-insensitive) and assigns its value to the provided FieldRef. Useful in subscriber code that manually parses the request payload. |
 | BuildJsonFromRecord | `procedure BuildJsonFromRecord(var RecRef: RecordRef; InterfaceCode: Code[20]): Text` | Utility: serializes a record to a JSON object string using the field mappings **of the given interface**, which it resolves itself. Useful in `OnBeforeBuildSendPayload` subscribers that want to build on top of the standard serialization. The interface code is a mandatory parameter rather than a pre-filtered record: the earlier signature took `var FieldMappings: Record` and discarded the caller's filter internally, so a payload could pick up another interface's JSON keys. |
 | SplitCsvRecords | `procedure SplitCsvRecords(RequestText: Text; Delimiter: Char; var RecordLineNos: List of [Integer]): List of [Text]` | Utility: splits a raw CSV payload into logical records, respecting RFC 4180 quoting — a line break inside a quoted value does not end a record. Returns the record texts; `RecordLineNos` receives, for each returned record, the 1-based physical source line it starts on (header row and blank lines counted). |
@@ -916,20 +916,20 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 
 ---
 
-### Codeunit 50103 "BCNX Nexus HTTP Handler"
+### Codeunit 50103 "FXNI Nexus HTTP Handler"
 
 | Procedure | Signature | Description |
 |---|---|---|
-| SendRequest | `procedure SendRequest(var EndpointDef: Record "BCNX Nexus Endpoint Definition"; Method: Text; Body: Text; var ResponseText: Text; var HttpStatusCode: Integer): Boolean` | Sends an HTTP request to the endpoint. Handles authentication header injection. Returns `true` if the response is a 2xx status. |
-| AcquireOAuthToken | `procedure AcquireOAuthToken(var EndpointDef: Record "BCNX Nexus Endpoint Definition"): Text` | Acquires or returns a cached OAuth token. Handles token expiry. Stores the token in IsolatedStorage via the endpoint table methods. |
-| BuildBasicAuthHeader | `procedure BuildBasicAuthHeader(var EndpointDef: Record "BCNX Nexus Endpoint Definition"): SecretText` | Returns a base64-encoded `Basic <credentials>` header value for the endpoint. Returns `SecretText`, not `Text`, so the credentials never materialize as a plain string. |
-| TestConnection | `procedure TestConnection(var EndpointDef: Record "BCNX Nexus Endpoint Definition"): Boolean` | Issues a GET request to the endpoint URL and returns true if the response is 2xx. Used by the Setup page to verify connectivity. |
+| SendRequest | `procedure SendRequest(var EndpointDef: Record "FXNI Nexus Endpoint Definition"; Method: Text; Body: Text; var ResponseText: Text; var HttpStatusCode: Integer): Boolean` | Sends an HTTP request to the endpoint. Handles authentication header injection. Returns `true` if the response is a 2xx status. |
+| AcquireOAuthToken | `procedure AcquireOAuthToken(var EndpointDef: Record "FXNI Nexus Endpoint Definition"): Text` | Acquires or returns a cached OAuth token. Handles token expiry. Stores the token in IsolatedStorage via the endpoint table methods. |
+| BuildBasicAuthHeader | `procedure BuildBasicAuthHeader(var EndpointDef: Record "FXNI Nexus Endpoint Definition"): SecretText` | Returns a base64-encoded `Basic <credentials>` header value for the endpoint. Returns `SecretText`, not `Text`, so the credentials never materialize as a plain string. |
+| TestConnection | `procedure TestConnection(var EndpointDef: Record "FXNI Nexus Endpoint Definition"): Boolean` | Issues a GET request to the endpoint URL and returns true if the response is 2xx. Used by the Setup page to verify connectivity. |
 
 **Local procedures:** `ParseAndAddHeaders`, `OnBeforeSendRequest`, `OnAfterSendRequest`, `OnBeforeAcquireToken`.
 
 ---
 
-### Codeunit 50104 "BCNX Nexus Setup Management"
+### Codeunit 50104 "FXNI Nexus Setup Management"
 
 | Procedure | Signature | Description |
 |---|---|---|
@@ -941,15 +941,15 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 
 ---
 
-### Codeunit 50106 "BCNX Attach. Processing"
+### Codeunit 50106 "FXNI Attach. Processing"
 
 | Procedure | Signature | Description |
 |---|---|---|
-| ProcessAttachmentReceive | `procedure ProcessAttachmentReceive(var InterfaceDef: Record "BCNX Nexus Interface Def."; var TransactionRec: Record "BCNX Nexus Transaction List")` | Entry point for attachment-mode receive processing. Accepts a single JSON object or a JSON array of attachment objects. |
-| StoreAttachmentContent | `procedure StoreAttachmentContent(var Attachment: Record "BCNX Nexus Attachment"; Base64Content: Text)` | Decodes base64 content and writes it to the attachment's local blob. Raises `OnBeforeStoreContent` so external storage providers can intercept. |
-| RetrieveAttachmentContent | `procedure RetrieveAttachmentContent(var Attachment: Record "BCNX Nexus Attachment"; var InStr: InStream)` | Provides an InStream over the attachment content. Raises `OnBeforeRetrieveContent` so external storage providers can intercept. |
-| CheckExternalStorageComplete | `procedure CheckExternalStorageComplete(var Attachment: Record "BCNX Nexus Attachment")` | Refuses an attachment whose Storage Location is External but whose External Reference is empty. Called after an `OnBeforeStoreContent` subscriber has handled the content, so a subscriber that moves a file out of Business Central without naming where it went fails loudly instead of leaving an unreadable attachment behind. |
-| TryRetrieveExternalContent | `procedure TryRetrieveExternalContent(var Attachment: Record "BCNX Nexus Attachment"; var InStr: InStream): Boolean` | Fires `OnBeforeRetrieveContent` and reports whether a subscriber actually supplied the stream, instead of silently falling back to the local blob. `RetrieveAttachmentContent` delegates here, so the event is still raised in exactly one place. Call it when "no external handler installed" has to become a decision — for an externally stored attachment there is no local blob to fall back to. |
+| ProcessAttachmentReceive | `procedure ProcessAttachmentReceive(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Entry point for attachment-mode receive processing. Accepts a single JSON object or a JSON array of attachment objects. |
+| StoreAttachmentContent | `procedure StoreAttachmentContent(var Attachment: Record "FXNI Nexus Attachment"; Base64Content: Text)` | Decodes base64 content and writes it to the attachment's local blob. Raises `OnBeforeStoreContent` so external storage providers can intercept. |
+| RetrieveAttachmentContent | `procedure RetrieveAttachmentContent(var Attachment: Record "FXNI Nexus Attachment"; var InStr: InStream)` | Provides an InStream over the attachment content. Raises `OnBeforeRetrieveContent` so external storage providers can intercept. |
+| CheckExternalStorageComplete | `procedure CheckExternalStorageComplete(var Attachment: Record "FXNI Nexus Attachment")` | Refuses an attachment whose Storage Location is External but whose External Reference is empty. Called after an `OnBeforeStoreContent` subscriber has handled the content, so a subscriber that moves a file out of Business Central without naming where it went fails loudly instead of leaving an unreadable attachment behind. |
+| TryRetrieveExternalContent | `procedure TryRetrieveExternalContent(var Attachment: Record "FXNI Nexus Attachment"; var InStr: InStream): Boolean` | Fires `OnBeforeRetrieveContent` and reports whether a subscriber actually supplied the stream, instead of silently falling back to the local blob. `RetrieveAttachmentContent` delegates here, so the event is still raised in exactly one place. Call it when "no external handler installed" has to become a decision — for an externally stored attachment there is no local blob to fall back to. |
 
 ---
 
@@ -957,18 +957,18 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 
 BC Nexus ships with three assignable permission sets. The split follows one rule: whoever may execute the codeunit that resolves an endpoint's stored credentials can use those credentials to call any Send interface, whether or not they can ever see the credential itself in a table. The interactive business user and the technical account a foreign system authenticates as are therefore two separate roles, not one role with different table rights. Credentials live in Isolated Storage — no permission set governs access to that storage directly; codeunit execute rights are the only lever.
 
-### BCNX Nexus Admin (Per 50100)
+### FXNI Nexus Admin (Per 50100)
 
-Full RIMD access to all BC Nexus configuration and transaction tables, plus execute rights on all BC Nexus codeunits and pages. The only set that can execute `BCNX Nexus Setup Management` and page `BCNX Set Secret Dialog`, and therefore the only set that can register or replace endpoint credentials, publish the web service, create the job queue entry, or load the sample interface. Assign to the BC Nexus administrator user.
+Full RIMD access to all BC Nexus configuration and transaction tables, plus execute rights on all BC Nexus codeunits and pages. The only set that can execute `FXNI Nexus Setup Management` and page `FXNI Set Secret Dialog`, and therefore the only set that can register or replace endpoint credentials, publish the web service, create the job queue entry, or load the sample interface. Assign to the BC Nexus administrator user.
 
-### BCNX Nexus User (Per 50101)
+### FXNI Nexus User (Per 50101)
 
-Read-only access to configuration tables. Read and modify access to the transaction list (allowing users to cancel or reset transactions). No codeunit execute rights at all: this set cannot call `BCNX Nexus Webservice`, `BCNX Txn. Processing`, `BCNX Attach. Processing` or `BCNX Nexus HTTP Handler`, so it cannot run any interface — Send, Receive or Publish — and the "Process Manually" action on the transaction pages fails for it with a permission error by design. A failed transaction is retried with "Reset Status" instead, which only writes the journal row; the job queue then reprocesses the transaction under its own account. Assign to users who monitor integrations but do not configure them or trigger interfaces themselves.
+Read-only access to configuration tables. Read and modify access to the transaction list (allowing users to cancel or reset transactions). No codeunit execute rights at all: this set cannot call `FXNI Nexus Webservice`, `FXNI Txn. Processing`, `FXNI Attach. Processing` or `FXNI Nexus HTTP Handler`, so it cannot run any interface — Send, Receive or Publish — and the "Process Manually" action on the transaction pages fails for it with a permission error by design. A failed transaction is retried with "Reset Status" instead, which only writes the journal row; the job queue then reprocesses the transaction under its own account. Assign to users who monitor integrations but do not configure them or trigger interfaces themselves.
 
-### BCNX Nexus Integr. (Per 50102, caption "BC Nexus Integration")
+### FXNI Nexus Integr. (Per 50102, caption "BC Nexus Integration")
 
-The technical account a foreign system authenticates as when it delivers data into BC Nexus or pulls a Publish interface — an S2S application registration or a dedicated service user, never a person signing in interactively. (The object name is abbreviated because a permission set identifier cannot exceed 20 characters; the caption is what an administrator sees when assigning it.) Executes the web service entry point, the processing codeunits and the HTTP handler, and creates and updates transaction and attachment records. No page permissions at all — this account has no user interface — and no write access to any configuration table, so it cannot register or change endpoints, redirect an endpoint URL, or touch credentials; those remain with `BCNX Nexus Admin`.
+The technical account a foreign system authenticates as when it delivers data into BC Nexus or pulls a Publish interface — an S2S application registration or a dedicated service user, never a person signing in interactively. (The object name is abbreviated because a permission set identifier cannot exceed 20 characters; the caption is what an administrator sees when assigning it.) Executes the web service entry point, the processing codeunits and the HTTP handler, and creates and updates transaction and attachment records. No page permissions at all — this account has no user interface — and no write access to any configuration table, so it cannot register or change endpoints, redirect an endpoint URL, or touch credentials; those remain with `FXNI Nexus Admin`.
 
 ### Permission requirements for dependent extensions
 
-When your extension's subscriber codeunits read BC Nexus tables, include those table permissions in your own permission set. Do not rely on the user already holding `BCNX Nexus Admin` — your extension should declare its own minimal permissions so it works correctly regardless of which BC Nexus permission set the user holds.
+When your extension's subscriber codeunits read BC Nexus tables, include those table permissions in your own permission set. Do not rely on the user already holding `FXNI Nexus Admin` — your extension should declare its own minimal permissions so it works correctly regardless of which BC Nexus permission set the user holds.

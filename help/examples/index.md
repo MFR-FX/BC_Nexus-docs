@@ -21,10 +21,10 @@ Währungssatz.
 | # | Voraussetzung | Wo eingerichtet |
 |---|---|---|
 | 1 | BC Nexus ist installiert und **Allow HttpClient Requests** ist aktiv | Extension Management |
-| 2 | Codeunit **50100** ist als Webservice mit dem Service-Namen `BCNXNexusWebservice` veröffentlicht | Seite **Web Services**, siehe [Setup Guide]({{ site.baseurl }}/help/setup-guide/) Abschnitt 2 |
+| 2 | Codeunit **50100** ist als Webservice mit dem Service-Namen `FXNINexusWebservice` veröffentlicht | Seite **Web Services**, siehe [Setup Guide]({{ site.baseurl }}/help/setup-guide/) Abschnitt 2 |
 | 3 | Beispieldaten sind geladen (Endpunkt `DEMO`, Schnittstelle `CURRENCYIMPORT` mit drei Feldzuordnungen) | Aktion **Beispieldaten laden** auf der Seite **BC Nexus Setup** |
 | 4 | Nur bei Beispieldaten aus einer Version vor 27.2.0.0: die beiden korrigierten Feldnummern nachziehen — siehe Abschnitt 2 | Seite **Feldzuordnung** der Schnittstelle `CURRENCYIMPORT` |
-| 5 | Der aufrufende technische Benutzer hat den Berechtigungssatz `BCNX Nexus Integr.` **und** einen Satz mit Lese-/Schreibrecht auf die Zieltabelle (z. B. `D365 BUS FULL ACCESS`) — `BCNX Nexus Integr.` deckt keine `tabledata`-Rechte auf Zieltabellen ab | Benutzerberechtigungen |
+| 5 | Der aufrufende technische Benutzer hat den Berechtigungssatz `FXNI Nexus Integr.` **und** einen Satz mit Lese-/Schreibrecht auf die Zieltabelle (z. B. `D365 BUS FULL ACCESS`) — `FXNI Nexus Integr.` deckt keine `tabledata`-Rechte auf Zieltabellen ab | Benutzerberechtigungen |
 | 6 | Eine Entra-App-Registrierung mit Client-Credentials und erteilter Business-Central-Berechtigung existiert | siehe [Setup Guide]({{ site.baseurl }}/help/setup-guide/) Abschnitt 3 |
 | 7 | Für Abschnitt 8 (Publish): eine Schnittstelle vom Typ `Publish` ist angelegt | Seite **BC Nexus Setup**, Unterliste Schnittstellendefinitionen |
 
@@ -52,7 +52,7 @@ Ein als Webservice veröffentlichtes Codeunit stellt seine öffentlichen Prozedu
 **unbound actions** bereit. Der Aktionsname ist `{ServiceName}_{ProcedureName}`:
 
 ```
-POST https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environmentName}/ODataV4/BCNXNexusWebservice_{ProcedureName}?company={companyName}
+POST https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environmentName}/ODataV4/FXNINexusWebservice_{ProcedureName}?company={companyName}
 Authorization: Bearer {token}
 Content-Type: application/json
 ```
@@ -61,14 +61,14 @@ Content-Type: application/json
   `Meine%20Firma`. Alternativ akzeptiert BC die Mandanten-GUID: `?company={companyId}`.
 - Gleichwertig ist die Pfadform mit Mandantensegment, die auch
   [API Reference]({{ site.baseurl }}/help/api-reference/) als Basis-URL nennt:
-  `.../ODataV4/Company('{companyName}')/BCNXNexusWebservice_{ProcedureName}`.
+  `.../ODataV4/Company('{companyName}')/FXNINexusWebservice_{ProcedureName}`.
 - Der Body ist ein JSON-Objekt, dessen Schlüssel **exakt** den AL-Parameternamen entsprechen —
   inklusive Groß-/Kleinschreibung. Für `Receive` sind das `InterfaceCode` und `RequestData`.
 - Die Antwort ist immer `{"@odata.context": "...", "value": <Rückgabewert>}`.
 
 > **Vor dem ersten Aufruf prüfen.** Rufen Sie einmal
 > `GET .../ODataV4/$metadata` ab und suchen Sie das Element
-> `<Action Name="BCNXNexusWebservice_Receive">`. Dort stehen die Parameternamen so, wie der
+> `<Action Name="FXNINexusWebservice_Receive">`. Dort stehen die Parameternamen so, wie der
 > Server sie erwartet. Das ist die einzige verlässliche Quelle, falls ein Aufruf mit
 > *„The parameter … is not defined"* abgewiesen wird.
 
@@ -127,6 +127,7 @@ Die Beispieldateien lassen sich über die Links in der folgenden Tabelle herunte
 | [`publish-currency-unknown-key.payload.json`](publish-currency-unknown-key.payload.json) | Abrufoptionen mit einem JSON-Schlüssel, den die Feldzuordnung nicht kennt | Muss mit *„This interface cannot be filtered on 'symbol'."* fehlschlagen — kein leeres Ergebnis |
 | [`send-currency-options.json`](send-currency-options.json) | Body für `SendWithOptions` | Verlangt eine eigene Schnittstelle vom Typ `Senden` — siehe Abschnitt 8 |
 | [`send-currency-options.payload.json`](send-currency-options.payload.json) | Dieselben Abrufoptionen unescaped | Verarbeitungstest |
+| [`send-currency-bare.json`](send-currency-bare.json) | Body für `SendWithOptions` mit `"envelope": false` | Payload/Antwort ist das nackte Array statt des Envelope-Objekts — siehe Abschnitt 8 |
 
 Die Reihenfolge für einen vollständigen Durchlauf: erst `single`, dann `array`, dann `update`,
 zuletzt `missing-mandatory`. Es genügt, die Aufrufe in dieser Reihenfolge abzusetzen — die Job
@@ -184,7 +185,7 @@ Einzelnen Währungssatz senden:
 
 ```bash
 curl -i -X POST \
-  "https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environmentName}/ODataV4/BCNXNexusWebservice_Receive?company={companyName}" \
+  "https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environmentName}/ODataV4/FXNINexusWebservice_Receive?company={companyName}" \
   -H "Authorization: Bearer {token}" \
   -H "Content-Type: application/json" \
   --data-binary @docs/examples/receive-currency-single.json
@@ -200,7 +201,7 @@ Array senden:
 
 ```bash
 curl -i -X POST \
-  "https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environmentName}/ODataV4/BCNXNexusWebservice_Receive?company={companyName}" \
+  "https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environmentName}/ODataV4/FXNINexusWebservice_Receive?company={companyName}" \
   -H "Authorization: Bearer {token}" \
   -H "Content-Type: application/json" \
   --data-binary @docs/examples/receive-currency-array.json
@@ -219,7 +220,7 @@ Mit Metadaten senden (Korrelation und Idempotenz — ein zweiter Aufruf mit dems
 
 ```bash
 curl -i -X POST \
-  "https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environmentName}/ODataV4/BCNXNexusWebservice_ReceiveWithMetadata?company={companyName}" \
+  "https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environmentName}/ODataV4/FXNINexusWebservice_ReceiveWithMetadata?company={companyName}" \
   -H "Authorization: Bearer {token}" \
   -H "Content-Type: application/json" \
   -d '{
@@ -241,7 +242,7 @@ Publish abrufen:
 
 ```bash
 curl -s -X POST \
-  "https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environmentName}/ODataV4/BCNXNexusWebservice_Publish?company={companyName}" \
+  "https://api.businesscentral.dynamics.com/v2.0/{tenantId}/{environmentName}/ODataV4/FXNINexusWebservice_Publish?company={companyName}" \
   -H "Authorization: Bearer {token}" \
   -H "Content-Type: application/json" \
   --data-binary @docs/examples/publish-request.json | jq -r .value | jq .
@@ -440,6 +441,34 @@ gekürzte Antwort gibt es nicht, denn sie wäre von der vollständigen nicht zu 
 Die Optionen werden vor der Verarbeitung auf der Transaktionszeile abgelegt. Die Zeile sagt
 danach, mit welchem Filter, welcher Seitengröße und welchem Token der Aufruf gelaufen ist — es
 gibt keinen zweiten Ort dafür und keinen Weg, einen Send-Aufruf ohne diesen Nachweis auszuführen.
+
+Mit `"envelope": false` in den Abrufoptionen bleibt die Nutzlast das nackte Array der Sätze,
+ohne `value`, `pageSize`, `hasMore` und die übrigen Envelope-Felder — für Partnersysteme, deren
+eingehendes Format fest auf ein Array steht. [`send-currency-bare.json`](send-currency-bare.json) zeigt das. Blättern und
+`includeCount` stehen dann nicht zur Verfügung: ein nacktes Array hat keinen Platz für
+`hasMore`/`nextPageToken` oder `count`, deshalb wird die Kombination abgewiesen statt die Option
+stillschweigend zu ignorieren. Das gilt für `SendWithOptions` genauso wie für `Publish`.
+
+### Timeout-Fixture
+
+Für den Timeout-Schritt des Smoke-Skripts (Abschnitt 10) braucht es eine eigene, per Hand
+angelegte Schnittstelle — die Beispieldaten enthalten sie nicht:
+
+| Objekt | Feld | Wert |
+|---|---|---|
+| Endpunkt `TIMEOUT` | URL | `https://httpbin.org/delay/10` |
+| | HTTP Timeout (ms) | `3000` |
+| | Authentifizierung | Keine |
+| Schnittstelle `CURRENCYTIMEOUT` | Tabellennr. | `4` (Currency) |
+| | Schnittstellentyp | `Senden` |
+| | Feldzuordnungstyp | `JSON` |
+| | Endpunktcode | `TIMEOUT` |
+| | Feldzuordnung | wie `CURRENCYSEND` |
+
+Der Schritt beweist, dass der konfigurierte Timeout vom SaaS-Laufzeitsystem tatsächlich
+angewendet wird: `Send` schlägt nach rund 3 s mit `status 0` fehl, statt httpbins 10-Sekunden-
+Verzögerung abzuwarten. Nicht beweisbar ist damit die Obergrenze von 300000 ms — die setzt der
+Serverparameter NavHttpClientMaxTimeout, den ein SaaS-Mandant weder einsehen noch setzen kann.
 
 ### Feste Filter an der Schnittstelle
 

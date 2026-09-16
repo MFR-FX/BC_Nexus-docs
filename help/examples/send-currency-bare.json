@@ -1,0 +1,4 @@
+{
+  "interfaceCode": "CURRENCYSEND",
+  "requestData": "{\"envelope\": false}"
+}
