@@ -146,6 +146,8 @@ For each field you want to map:
 | Mandatory | Enable for required fields |
 | Validate Field | Enable to run BC validation triggers on this field |
 
+**Json Path (Receive only, JSON only).** Leave it empty for the flat lookup above — Json Key alone is all most interfaces need. Fill it instead of Json Key when the value sits inside a nested JSON payload, with dot-separated segments and an optional fixed array index, e.g. `header.lines[0].itemNo`; a key that itself contains a dot or a bracket cannot be addressed this way. Setting it on a Send or Publish interface, on a CSV interface, or entering an expression that does not parse, is rejected when you leave the field.
+
 **Tip:** Use the **Generate JSON Key** action to auto-generate valid JSON key names from field names.
 
 ### Step 3 — Test the Interface

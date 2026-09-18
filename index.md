@@ -21,6 +21,7 @@ in minutes and achieve your first working interface in under 30 minutes.
 | [Warranty]({{ site.baseurl }}/warranty/) | Warranty statement |
 | [EULA]({{ site.baseurl }}/legal/eula/) | End User License Agreement |
 | [Privacy Statement]({{ site.baseurl }}/legal/privacy-statement/) | Privacy statement |
+| [Impressum]({{ site.baseurl }}/legal/impressum/) | Provider identification (§ 5 DDG, German) |
 
 ---
 
