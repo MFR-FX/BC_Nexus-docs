@@ -5,7 +5,7 @@ permalink: /help/developer-guide/
 
 # BC Nexus Developer Guide
 
-**Publisher:** fx-its | **Prefix:** FXNI | **ID Range:** 50100–51299  
+**Publisher:** fx-its | **Prefix:** FXNI | **ID Range:** 73710475–73710674  
 **BC Version:** 27.0 (Runtime 16) | **Target:** Cloud (SaaS-first)
 
 ---
@@ -53,7 +53,7 @@ Everything else — including authentication, HTTP transport, retry scheduling, 
 
 ## 2. Data Model Reference
 
-### Table 50100 "FXNI Nexus Setup"
+### Table 73710475 "FXNI Nexus Setup"
 
 Single-row configuration table. PK is always `'SETUP'`.
 
@@ -61,11 +61,11 @@ Single-row configuration table. PK is always `'SETUP'`.
 |---|---|---|
 | Primary Key | Code[10] | Always `'SETUP'`. |
 | No. Of Retries per Transaction | Integer | How many times the job queue retries a failed transaction before setting Status to Error. |
-| Auto. Process Transactions | Boolean | When true, a job queue entry (Codeunit 50101) runs every minute to process Open transactions. |
+| Auto. Process Transactions | Boolean | When true, a job queue entry (Codeunit 73710476) runs every minute to process Open transactions. |
 | Enable Attachment Storage | Boolean | Master switch for attachment-mode interfaces. |
 | Max Attachment Size (KB) | Integer | Maximum allowed attachment size. 0 = unlimited. |
 
-### Table 50102 "FXNI Nexus Interface Def."
+### Table 73710477 "FXNI Nexus Interface Def."
 
 One row per configured interface.
 
@@ -85,7 +85,7 @@ One row per configured interface.
 | Endpoint Code | Code[20] | FK to "FXNI Nexus Endpoint Definition". Required for Send and Publish. |
 | Attachment Mode | Boolean | When true (Receive only), the transaction stores a file rather than writing to table fields. |
 
-### Table 50103 "FXNI Nexus Endpoint Definition"
+### Table 73710478 "FXNI Nexus Endpoint Definition"
 
 One row per external HTTP endpoint.
 
@@ -106,7 +106,7 @@ One row per external HTTP endpoint.
 | Client Secret | IsolatedStorage | Set via `SetClientSecret()`. Never stored in a table field. |
 | Access Token | IsolatedStorage | Managed automatically. Retrieved via `GetAccessToken()`. |
 
-### Table 50104 "FXNI Nexus Field Map Def."
+### Table 73710479 "FXNI Nexus Field Map Def."
 
 One row per field mapping. Composite PK: `Interface Definition Code` + `Position`.
 
@@ -125,7 +125,7 @@ One row per field mapping. Composite PK: `Interface Definition Code` + `Position
 | Validate Field | Boolean | Calls `FieldRef.Validate()` after assignment, triggering the table field's `OnValidate`. |
 | Skip If Empty | Boolean | Skips this field entirely when sending/publishing if the value is empty. |
 
-### Table 50105 "FXNI Nexus Transaction List"
+### Table 73710480 "FXNI Nexus Transaction List"
 
 One row per transaction, regardless of direction.
 
@@ -146,7 +146,7 @@ One row per transaction, regardless of direction.
 | External Message Id | Text[100] | Message identifier from the originating external system. |
 | Contract Version | Code[20] | Caller-declared API contract version. |
 
-### Table 50106 "FXNI Nexus Attachment"
+### Table 73710481 "FXNI Nexus Attachment"
 
 One row per attachment received through an attachment-mode interface.
 
@@ -174,7 +174,7 @@ Understanding the lifecycle is essential for placing your subscriber code correc
 ### Receive flow
 
 ```
-Caller → Codeunit 50100 "FXNI Nexus Webservice"
+Caller → Codeunit 73710475 "FXNI Nexus Webservice"
   .Receive() / .ReceiveAndGetTransactionEntryNo() / .ReceiveWithMetadata()
     → OnBeforeReceive                          [event — can short-circuit]
     → Idempotency check (suppress duplicate if key matches)
@@ -182,9 +182,9 @@ Caller → Codeunit 50100 "FXNI Nexus Webservice"
     → OnAfterReceive                           [event]
     → Return (transaction is queued, not yet processed)
 
-Job Queue → Codeunit 50101 "FXNI Txn. Proc. Job"
+Job Queue → Codeunit 73710476 "FXNI Txn. Proc. Job"
   → Finds Open/Error transactions where Next Try At <= now
-  → Codeunit.Run(50102, TransactionRec) for each
+  → Codeunit.Run(73710477, TransactionRec) for each
     → OnBeforeProcessTransaction               [event — can short-circuit]
     → ValidateSetup
     → ProcessReceive:
@@ -211,10 +211,10 @@ Job Queue → Codeunit 50101 "FXNI Txn. Proc. Job"
 ### Send flow
 
 ```
-Caller → Codeunit 50100 "FXNI Nexus Webservice"
+Caller → Codeunit 73710475 "FXNI Nexus Webservice"
   .Send()
     → Insert Transaction record (Status = Open)
-    → Codeunit.Run(50102, TransactionRec) — synchronous
+    → Codeunit.Run(73710477, TransactionRec) — synchronous
         → OnBeforeProcessTransaction           [event — can short-circuit]
         → ValidateSetup
         → ProcessSend:
@@ -257,7 +257,7 @@ The subscriber stubs below are shown as standalone procedures, without the surro
 
 ---
 
-### 4.1 Codeunit 50100 "FXNI Nexus Webservice"
+### 4.1 Codeunit 73710475 "FXNI Nexus Webservice"
 
 #### `OnBeforeReceive`
 
@@ -315,7 +315,7 @@ end;
 
 ---
 
-### 4.2 Codeunit 50102 "FXNI Txn. Processing"
+### 4.2 Codeunit 73710477 "FXNI Txn. Processing"
 
 #### `OnBeforeProcessTransaction`
 
@@ -542,7 +542,7 @@ end;
 
 ---
 
-### 4.3 Codeunit 50106 "FXNI Attach. Processing"
+### 4.3 Codeunit 73710481 "FXNI Attach. Processing"
 
 These events are relevant only for attachment-mode Receive interfaces.
 
@@ -828,7 +828,7 @@ The `id` value `b7749b8c-bd78-496d-b8b0-0d23ce1e94f9` is the BC Nexus app ID fro
 
 ### ID range
 
-BC Nexus occupies IDs **50100–51299**. Your dependent extension must use an ID range that does not overlap. If you are publishing to AppSource, you must use a Microsoft-assigned range. For partner/customer extensions, use any non-conflicting range above 50000 that is registered to your publisher.
+BC Nexus occupies IDs **73710475–73710674**. Your dependent extension must use an ID range that does not overlap. If you are publishing to AppSource, you must use a Microsoft-assigned range. For partner/customer extensions, use any non-conflicting range above 50000 that is registered to your publisher.
 
 ### Object and field naming
 
@@ -873,7 +873,7 @@ Follow BC Nexus conventions for file names:
 
 Only `procedure` declarations (without the `local` modifier) are part of the supported public API. Calling `local procedure` members from outside BC Nexus is not supported and may break without notice.
 
-### Codeunit 50100 "FXNI Nexus Webservice"
+### Codeunit 73710475 "FXNI Nexus Webservice"
 
 | Procedure | Signature | Description |
 |---|---|---|
@@ -888,7 +888,7 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 
 ---
 
-### Codeunit 50101 "FXNI Txn. Proc. Job"
+### Codeunit 73710476 "FXNI Txn. Proc. Job"
 
 | Procedure | Signature | Description |
 |---|---|---|
@@ -898,11 +898,11 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 
 ---
 
-### Codeunit 50102 "FXNI Txn. Processing"
+### Codeunit 73710477 "FXNI Txn. Processing"
 
 | Procedure | Signature | Description |
 |---|---|---|
-| ProcessTransaction | `procedure ProcessTransaction(var TransactionRec: Record "FXNI Nexus Transaction List"): Boolean` | Processes a single transaction record. Called by the job queue (Codeunit 50101) and by `Send()` / `Publish()`. Safe to call directly in tests or from custom job logic. |
+| ProcessTransaction | `procedure ProcessTransaction(var TransactionRec: Record "FXNI Nexus Transaction List"): Boolean` | Processes a single transaction record. Called by the job queue (Codeunit 73710476) and by `Send()` / `Publish()`. Safe to call directly in tests or from custom job logic. |
 | ValidateSetup | `procedure ValidateSetup(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Validates that the interface definition is complete and not blocked. Raises an error on any misconfiguration. |
 | ProcessReceive | `procedure ProcessReceive(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Executes the Receive flow: parses the request, performs PK lookup, and inserts or modifies the target record. |
 | ProcessSend | `procedure ProcessSend(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Executes the Send flow: builds the payload and HTTP-POSTs it to the endpoint. |
@@ -916,7 +916,7 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 
 ---
 
-### Codeunit 50103 "FXNI Nexus HTTP Handler"
+### Codeunit 73710478 "FXNI Nexus HTTP Handler"
 
 | Procedure | Signature | Description |
 |---|---|---|
@@ -929,19 +929,19 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 
 ---
 
-### Codeunit 50104 "FXNI Nexus Setup Management"
+### Codeunit 73710479 "FXNI Nexus Setup Management"
 
 | Procedure | Signature | Description |
 |---|---|---|
 | InitializeSetup | `procedure InitializeSetup()` | Creates the setup record with default values if it does not already exist. |
 | CreateWebServiceEntry | `procedure CreateWebServiceEntry()` | Publishes the BC Nexus webservice entry. Raises events before and after for extensibility. |
-| CreateJobQueueEntry | `procedure CreateJobQueueEntry()` | Creates the recurring job queue entry for Codeunit 50101 if Auto. Process Transactions is enabled. |
-| DeleteJobQueueEntry | `procedure DeleteJobQueueEntry()` | Removes all job queue entries for Codeunit 50101. |
+| CreateJobQueueEntry | `procedure CreateJobQueueEntry()` | Creates the recurring job queue entry for Codeunit 73710476 if Auto. Process Transactions is enabled. |
+| DeleteJobQueueEntry | `procedure DeleteJobQueueEntry()` | Removes all job queue entries for Codeunit 73710476. |
 | LoadSampleData | `procedure LoadSampleData()` | Inserts the built-in sample endpoint and Currency import interface. Safe to call multiple times — uses `Get()` guards. |
 
 ---
 
-### Codeunit 50106 "FXNI Attach. Processing"
+### Codeunit 73710481 "FXNI Attach. Processing"
 
 | Procedure | Signature | Description |
 |---|---|---|
@@ -957,15 +957,15 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 
 BC Nexus ships with three assignable permission sets. The split follows one rule: whoever may execute the codeunit that resolves an endpoint's stored credentials can use those credentials to call any Send interface, whether or not they can ever see the credential itself in a table. The interactive business user and the technical account a foreign system authenticates as are therefore two separate roles, not one role with different table rights. Credentials live in Isolated Storage — no permission set governs access to that storage directly; codeunit execute rights are the only lever.
 
-### FXNI Nexus Admin (Per 50100)
+### FXNI Nexus Admin (Per 73710475)
 
 Full RIMD access to all BC Nexus configuration and transaction tables, plus execute rights on all BC Nexus codeunits and pages. The only set that can execute `FXNI Nexus Setup Management` and page `FXNI Set Secret Dialog`, and therefore the only set that can register or replace endpoint credentials, publish the web service, create the job queue entry, or load the sample interface. Assign to the BC Nexus administrator user.
 
-### FXNI Nexus User (Per 50101)
+### FXNI Nexus User (Per 73710476)
 
 Read-only access to configuration tables. Read and modify access to the transaction list (allowing users to cancel or reset transactions). No codeunit execute rights at all: this set cannot call `FXNI Nexus Webservice`, `FXNI Txn. Processing`, `FXNI Attach. Processing` or `FXNI Nexus HTTP Handler`, so it cannot run any interface — Send, Receive or Publish — and the "Process Manually" action on the transaction pages fails for it with a permission error by design. A failed transaction is retried with "Reset Status" instead, which only writes the journal row; the job queue then reprocesses the transaction under its own account. Assign to users who monitor integrations but do not configure them or trigger interfaces themselves.
 
-### FXNI Nexus Integr. (Per 50102, caption "BC Nexus Integration")
+### FXNI Nexus Integr. (Per 73710477, caption "BC Nexus Integration")
 
 The technical account a foreign system authenticates as when it delivers data into BC Nexus or pulls a Publish interface — an S2S application registration or a dedicated service user, never a person signing in interactively. (The object name is abbreviated because a permission set identifier cannot exceed 20 characters; the caption is what an administrator sees when assigning it.) Executes the web service entry point, the processing codeunits and the HTTP handler, and creates and updates transaction and attachment records. No page permissions at all — this account has no user interface — and no write access to any configuration table, so it cannot register or change endpoints, redirect an endpoint URL, or touch credentials; those remain with `FXNI Nexus Admin`.
 

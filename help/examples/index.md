@@ -21,7 +21,7 @@ Währungssatz.
 | # | Voraussetzung | Wo eingerichtet |
 |---|---|---|
 | 1 | BC Nexus ist installiert und **Allow HttpClient Requests** ist aktiv | Extension Management |
-| 2 | Codeunit **50100** ist als Webservice mit dem Service-Namen `FXNINexusWebservice` veröffentlicht | Seite **Web Services**, siehe [Setup Guide]({{ site.baseurl }}/help/setup-guide/) Abschnitt 2 |
+| 2 | Codeunit **73710475** ist als Webservice mit dem Service-Namen `FXNINexusWebservice` veröffentlicht | Seite **Web Services**, siehe [Setup Guide]({{ site.baseurl }}/help/setup-guide/) Abschnitt 2 |
 | 3 | Beispieldaten sind geladen (Endpunkt `DEMO`, Schnittstelle `CURRENCYIMPORT` mit drei Feldzuordnungen) | Aktion **Beispieldaten laden** auf der Seite **BC Nexus Setup** |
 | 4 | Nur bei Beispieldaten aus einer Version vor 27.2.0.0: die beiden korrigierten Feldnummern nachziehen — siehe Abschnitt 2 | Seite **Feldzuordnung** der Schnittstelle `CURRENCYIMPORT` |
 | 5 | Der aufrufende technische Benutzer hat den Berechtigungssatz `FXNI Nexus Integr.` **und** einen Satz mit Lese-/Schreibrecht auf die Zieltabelle (z. B. `D365 BUS FULL ACCESS`) — `FXNI Nexus Integr.` deckt keine `tabledata`-Rechte auf Zieltabellen ab | Benutzerberechtigungen |
@@ -139,7 +139,7 @@ auf den zuvor angelegten Satz `XTS` trifft, wenn beide Aufrufe unmittelbar nache
 ## 5. Wichtig: `Receive` verarbeitet nicht, `Receive` reiht ein
 
 `Receive` legt einen Transaktionssatz mit Status **Offen** an, speichert die Nutzlast und kehrt
-sofort zurück. Die eigentliche Verarbeitung übernimmt die Job Queue (Codeunit 50101), die einmal
+sofort zurück. Die eigentliche Verarbeitung übernimmt die Job Queue (Codeunit 73710476), die einmal
 pro Minute alle offenen Transaktionen abarbeitet.
 
 Daraus folgt für jeden externen Aufrufer:

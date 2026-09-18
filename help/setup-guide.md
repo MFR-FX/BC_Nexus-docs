@@ -31,7 +31,7 @@ This is required for outbound Send interfaces (BC → external endpoint).
 
 ## 2. Publish the Web Service
 
-BC Online does not allow an extension to register web services programmatically. You must publish Codeunit 50100 manually before any external system can call `Receive`, `Send`, or `Publish`.
+BC Online does not allow an extension to register web services programmatically. You must publish Codeunit 73710475 manually before any external system can call `Receive`, `Send`, or `Publish`.
 
 1. Open the **Web Services** page in BC (search bar: "Web Services")
 2. Choose **New**
@@ -40,7 +40,7 @@ BC Online does not allow an extension to register web services programmatically.
 | Field | Value |
 |-------|-------|
 | Object Type | `Codeunit` |
-| Object ID | `50100` |
+| Object ID | `73710475` |
 | Service Name | `FXNINexusWebservice` |
 | Published | ✓ (enable the checkbox) |
 
@@ -309,7 +309,7 @@ date and option fields only. `In` takes a `|`-separated list in **Value**, at mo
 
 ### Step 5 — Trigger the Send
 
-From AL code or the **Processing Test** action, call `Codeunit 50100 Nexus Webservice: Send("ITEM-EXPORT")`.
+From AL code or the **Processing Test** action, call `Codeunit 73710475 Nexus Webservice: Send("ITEM-EXPORT")`.
 
 Use `SendWithOptions("ITEM-EXPORT", '{"page":{"size":200}}')` when the caller wants to add its own
 filter, a page size or a continuation token. `Send` is unchanged and means "no options".
@@ -431,10 +431,10 @@ These actions are additive page extensions and can be customized in BC's own pag
 Before removing the extension:
 
 1. On the **BC Nexus Setup** page, disable **Auto. Process Transactions**. This removes the Job
-   Queue Entry that runs Codeunit 50101 (`FXNI Txn. Proc. Job`) on a schedule — an entry left
+   Queue Entry that runs Codeunit 73710476 (`FXNI Txn. Proc. Job`) on a schedule — an entry left
    behind keeps firing after the extension is gone and errors on every run.
-2. Check for a Job Queue Entry pointing at Codeunit 50101 directly (search **Job Queue Entries**,
-   filter Object Type to Run = Codeunit and Object ID to Run = 50101) in case one was created
+2. Check for a Job Queue Entry pointing at Codeunit 73710476 directly (search **Job Queue Entries**,
+   filter Object Type to Run = Codeunit and Object ID to Run = 73710476) in case one was created
    outside the Setup page action, and remove it as well.
 3. On the **BC Nexus Setup** page, choose **Delete All Credentials**. This removes the stored
    Client Secret and Access Token of every endpoint in the current company and clears the token

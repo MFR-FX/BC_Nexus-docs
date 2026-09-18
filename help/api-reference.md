@@ -5,9 +5,9 @@ permalink: /help/api-reference/
 
 # BC Nexus — API Reference
 
-_Web service contract for Codeunit 50100 "FXNI Nexus Webservice"._
+_Web service contract for Codeunit 73710475 "FXNI Nexus Webservice"._
 
-External systems interact with BC Nexus through standard BC web service mechanisms (OData v4 or SOAP). Before any external call can reach BC Nexus, you must manually publish Codeunit 50100 on the BC **Web Services** page — this step is not performed automatically on install (BC Online does not allow programmatic web service registration from within an extension).
+External systems interact with BC Nexus through standard BC web service mechanisms (OData v4 or SOAP). Before any external call can reach BC Nexus, you must manually publish Codeunit 73710475 on the BC **Web Services** page — this step is not performed automatically on install (BC Online does not allow programmatic web service registration from within an extension).
 
 ---
 
@@ -25,12 +25,12 @@ BC Nexus does not manage inbound authentication — this is fully delegated to B
 
 ### Manual publish (required after every install / reinstall)
 
-Codeunit 50100 must be published manually on the BC **Web Services** page before any external call will work:
+Codeunit 73710475 must be published manually on the BC **Web Services** page before any external call will work:
 
 1. Open the **Web Services** page in BC (search for "Web Services")
 2. Choose **New**
 3. Set **Object Type** to `Codeunit`
-4. Set **Object ID** to `50100`
+4. Set **Object ID** to `73710475`
 5. Set **Service Name** to `FXNINexusWebservice`
 6. Enable the **Published** checkbox
 
