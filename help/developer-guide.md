@@ -5,7 +5,7 @@ permalink: /help/developer-guide/
 
 # BC Nexus Developer Guide
 
-**Publisher:** fx-its | **Prefix:** FXNI | **ID Range:** 73710475–73710674  
+**Publisher:** fx-its | **Prefix:** FXNI | **ID Range:** 73710475–73710534  
 **BC Version:** 27.0 (Runtime 16) | **Target:** Cloud (SaaS-first)
 
 ---
@@ -124,6 +124,7 @@ One row per field mapping. Composite PK: `Interface Definition Code` + `Position
 | Mandatory | Boolean | Transaction fails if the mapped key is absent or empty in the payload. |
 | Validate Field | Boolean | Calls `FieldRef.Validate()` after assignment, triggering the table field's `OnValidate`. |
 | Skip If Empty | Boolean | Skips this field entirely when sending/publishing if the value is empty. |
+| Json Path | Text[250] | Path into a nested incoming payload, e.g. `header.lines[0].itemNo`. When it is filled, the value is read through Codeunit 73710492 "FXNI Nexus Json Path" instead of looking `Json Key` up in the payload root. Empty (the default) is the previous behaviour, byte for byte. Only allowed on a Receive interface with Field Mapping Type JSON — the `OnValidate` refuses anything else, because no other path reads the field. |
 
 ### Table 73710480 "FXNI Nexus Transaction List"
 
@@ -165,6 +166,24 @@ One row per attachment received through an attachment-mode interface.
 | Interface Definition Code | Code[20] | Which interface created this attachment. |
 | Transaction Entry No. | Integer | The transaction that created this attachment. |
 
+### Table 73710483 "FXNI Nexus Interface Filter"
+
+One row per filter line of a Send or Publish interface. Composite PK: `Interface Definition Code` + `Line No.`
+
+| Field | Type | Purpose |
+|---|---|---|
+| Interface Definition Code | Code[20] | FK to "FXNI Nexus Interface Def." |
+| Line No. | Integer | Assigned in steps of 10000 on insert when left blank, so a line can be placed between two existing ones. |
+| Field No. | Integer | The field of the target table this line filters on. |
+| Field Name | Text[50] | Filled automatically from Field No. Read-only. A field that is part of no key only produces a message: the filter works, but it makes every call read the whole table. |
+| Operator | Enum "FXNI Filter Operator" | `Equal`, `NotEqual`, `GreaterThan`, `GreaterOrEqual`, `LessThan`, `LessOrEqual`, `Between`, `StartsWith`, `Contains`, `IsIn`. |
+| Value | Text[250] | The compared value, applied as a value and never as a filter expression — `*` and `\|` match literally. `IsIn` separates its values with a vertical bar. |
+| Value To | Text[250] | Upper end of a `Between` range; ignored by every other operator. |
+| Description | Text[250] | Free note. No effect on processing. |
+| Json Key | Text[50] | Only filled on the temporary instance a caller's conditions are read into. Blank on every stored row. |
+
+The same table is used with two lifetimes: the stored rows are the administrator's configuration, and Codeunit 73710490 reads a caller's own conditions into a *temporary* instance of it, so both travel through one value converter. See [Retrieval options on the outgoing paths](#retrieval-options-on-the-outgoing-paths).
+
 ---
 
 ## 3. Transaction Lifecycle
@@ -189,6 +208,9 @@ Job Queue → Codeunit 73710476 "FXNI Txn. Proc. Job"
     → ValidateSetup
     → ProcessReceive:
         → Parse JSON or CSV
+        → Load field mappings; every Json Path expression is checked once here
+        → Resolve each mapped value by Json Key, or through
+          Codeunit 73710492 "FXNI Nexus Json Path" when Json Path is filled
         → PK lookup (unless Always Create New or Entry Based)
         → If not found:
             → RecRef.Init()
@@ -219,7 +241,13 @@ Caller → Codeunit 73710475 "FXNI Nexus Webservice"
         → ValidateSetup
         → ProcessSend:
             → OnBeforeBuildSendPayload         [event — can replace payload]
-            → If Payload still empty: build JSON from field mappings
+            → If Payload still empty: BuildOutgoingEnvelope
+                → Codeunit 73710490 "FXNI Nexus Query Options" reads the
+                  options object out of the transaction's request data
+                → Interface filter lines (Table 73710483) → filter group 2
+                → The caller's own conditions               → filter group 0
+                → Build JSON from field mappings, cut to one page
+                → Wrap in the response envelope unless "envelope": false
             → HTTP POST to endpoint
             → Store response
         → Transaction.Status := Processed
@@ -229,7 +257,16 @@ Caller → Codeunit 73710475 "FXNI Nexus Webservice"
 
 ### Publish flow
 
-The same as Send except the HTTP call is omitted: the payload is stored in `Transaction.Response` and returned to the caller. `OnBeforeBuildSendPayload` fires in the same position.
+The same as Send except the HTTP call is omitted: the payload is stored in `Transaction.Response` and returned to the caller. `OnBeforeBuildSendPayload` fires in the same position, and the same `BuildOutgoingEnvelope` builds the answer.
+
+### Retrieval options on the outgoing paths
+
+Both outgoing paths read the options object out of the **transaction's own request data**, so the call that was queued is the call that is stored. Empty request data means the whole set in the envelope — that is the compatibility path for every caller written before this option existed. The wire format is in [`api-reference.md`]({{ site.baseurl }}/help/api-reference/#retrieval-options-send--publish); what matters for a subscriber is where it sits:
+
+- A subscriber to `OnBeforeBuildSendPayload` that sets `Payload` owns the **entire** payload. The event fires in front of the build, so no envelope, no filter and no paging decision is applied afterwards — including the interface's own filter lines. If your subscriber replaces the payload, it is responsible for narrowing the record set itself.
+- `Codeunit 73710490 "FXNI Nexus Query Options"` is public and usable on its own: `ParseOptions(RequestData)` reads the text without touching a table, `ResolveKeys(InterfaceCode, TableNo)` translates the caller's JSON keys into field numbers through the interface's field mapping, and `GetFilters`, `GetPageSize`, `GetPageToken`, `GetIncludeCount`, `GetEnvelope` and `HasOptions` hand the result over.
+- The field mapping is the allow-list. A caller may filter on a key only when the interface exposes it *and* that mapping publishes the field's own value — a static value on a real field number is excluded, so a masked field cannot be read back through row membership or `count`. Every refused key produces the same error, without naming the keys that would have worked.
+- A caller can narrow, never widen: configured filter lines go into filter group 2, the caller's into group 0, and the platform ANDs the groups.
 
 ---
 
@@ -237,7 +274,7 @@ The same as Send except the HTTP call is omitted: the payload is stored in `Tran
 
 All integration events use `[IntegrationEvent(false, false)]`. Neither parameter is `true`, meaning there is no global publisher and no inheritance. Subscribe with a standard `[EventSubscriber]` attribute.
 
-BC Nexus exposes events across three codeunits. They are grouped below by codeunit.
+BC Nexus exposes events across six codeunits. They are grouped below by codeunit.
 
 ### Namespaces and `using` directives
 
@@ -247,9 +284,9 @@ BC Nexus objects are organized into namespaces under `FxIts.BCNexus`. A subscrib
 |---|---|
 | `FxIts.BCNexus` | FXNI Nexus Install, FXNI Nexus Upgrade, FXNI Nexus Record Key Mgt., all three permission sets |
 | `FxIts.BCNexus.Setup` | Table and page "FXNI Nexus Setup", FXNI Nexus Setup Management |
-| `FxIts.BCNexus.Interfaces` | "FXNI Nexus Interface Def.", "FXNI Nexus Field Map Def.", the enums "FXNI Interface Type" and "FXNI Field Mapping Type", the interface and field mapping pages |
+| `FxIts.BCNexus.Interfaces` | "FXNI Nexus Interface Def.", "FXNI Nexus Field Map Def.", "FXNI Nexus Interface Filter", the enums "FXNI Interface Type", "FXNI Field Mapping Type" and "FXNI Filter Operator", the interface, field mapping and filter pages |
 | `FxIts.BCNexus.Transport` | "FXNI Nexus Endpoint Definition", the enums "FXNI Authentication Type" and "FXNI OAuth Auth Type", "FXNI Nexus HTTP Handler" |
-| `FxIts.BCNexus.Transactions` | "FXNI Nexus Transaction List", the enum "FXNI Transaction Status", "FXNI Nexus Webservice", "FXNI Txn. Proc. Job", "FXNI Txn. Processing" |
+| `FxIts.BCNexus.Transactions` | "FXNI Nexus Transaction List", the enum "FXNI Transaction Status", "FXNI Nexus Webservice", "FXNI Txn. Proc. Job", "FXNI Txn. Processing", "FXNI Nexus Query Options", "FXNI Nexus Json Path" |
 | `FxIts.BCNexus.Attachments` | "FXNI Nexus Attachment", the enum "FXNI Attach. Store", "FXNI Attach. Processing", the ten page extensions |
 | `FxIts.BCNexus.Test` | The test codeunit and the HTTP mock |
 
@@ -542,7 +579,97 @@ end;
 
 ---
 
-### 4.3 Codeunit 73710481 "FXNI Attach. Processing"
+### 4.3 Codeunit 73710478 "FXNI Nexus HTTP Handler"
+
+These events sit on the outbound HTTP path. `SendRequest()` is reached from the Send flow
+(`ProcessSend()` in "FXNI Txn. Processing") and from every connection test — the **Test Connection**
+action on the endpoint subpage and on the interface subpage as well as `TestConnection()` on codeunit 73710498 "FXNI Config API". A subscriber here
+sees all of them; `OnBeforeSendRequest` only gets the request, so narrow on the request URI when you
+mean just one endpoint.
+
+#### `OnBeforeSendRequest`
+
+| Attribute | Value |
+|---|---|
+| Fires in | `SendRequest()`, after the request URI, body, authentication header and the configured endpoint headers are all set on `HttpRequest`, and immediately before the timeout is applied and `HttpClient.Send()` is called. For an OAuth 2.0 endpoint the token has already been acquired at this point. |
+| Effect of `IsHandled := true` | No request is sent. `SendRequest()` sets `HttpStatusCode := 200`, returns `true`, and leaves the caller's `ResponseText` **untouched** — if your subscriber replaces the call, it has to deliver the response payload some other way, because it cannot write into `ResponseText` from here. |
+
+| Parameter | Direction | Type | Description |
+|---|---|---|---|
+| HttpRequest | var | HttpRequestMessage | The fully prepared request. Add or replace headers, rewrite the URI, or swap the content before it goes out. |
+| IsHandled | var | Boolean | Set to `true` to suppress the actual send. |
+
+**Typical use cases:**
+- Add a correlation or tracing header that BC Nexus does not know about.
+- Log the outgoing request (never the `Authorization` header) for troubleshooting.
+- Short-circuit the send in a test or staging company so no traffic leaves the tenant.
+
+**Subscriber stub:**
+```al
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Nexus HTTP Handler", 'OnBeforeSendRequest', '', false, false)]
+local procedure OnBeforeSendRequest(var HttpRequest: HttpRequestMessage; var IsHandled: Boolean)
+begin
+    // Your logic here.
+end;
+```
+
+---
+
+#### `OnAfterSendRequest`
+
+| Attribute | Value |
+|---|---|
+| Fires in | `SendRequest()`, after `HttpClient.Send()` has returned successfully and **before** the status code and the response body are read out into the caller's `HttpStatusCode` and `ResponseText`. A transport failure — `HttpClient.Send()` returning `false` — exits earlier and does **not** raise this event. |
+
+| Parameter | Direction | Type | Description |
+|---|---|---|---|
+| HttpResponse | var | HttpResponseMessage | The raw response. It is read only after this event, so a subscriber that rewrites the content changes what the caller receives. |
+
+**Typical use cases:**
+- Emit telemetry with the response status and duration.
+- Inspect response headers (rate limit, pagination cursor) that the caller never gets to see.
+- Unwrap a middleware envelope so the transaction sees the payload it expects.
+
+**Subscriber stub:**
+```al
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Nexus HTTP Handler", 'OnAfterSendRequest', '', false, false)]
+local procedure OnAfterSendRequest(var HttpResponse: HttpResponseMessage)
+begin
+    // Your logic here.
+end;
+```
+
+---
+
+#### `OnBeforeAcquireToken`
+
+| Attribute | Value |
+|---|---|
+| Fires in | `AcquireOAuthToken()`, as its first statement — before the cached token is checked, before an expired token is cleared and before the grant-type dispatch. |
+| Effect of `IsHandled := true` | `AcquireOAuthToken()` returns `Token` unchanged. BC Nexus neither reads nor writes its own token cache and does not touch `"Token Expires At"`, so a subscriber that takes over here owns caching and expiry as well. |
+
+| Parameter | Direction | Type | Description |
+|---|---|---|---|
+| EndpointDef | var | Record "FXNI Nexus Endpoint Definition" | The endpoint the token is needed for. |
+| Token | var | SecretText | The token your subscriber supplies. `SecretText`, not `Text`, on purpose: the value must never exist as a plain string on the way back, which is the same guarantee `BuildBasicAuthHeader` keeps for Basic auth. |
+| IsHandled | var | Boolean | Set to `true` to use your token instead of the built-in OAuth flow. |
+
+**Typical use cases:**
+- Fetch the token from a managed identity or a company-wide token service instead of the endpoint's own client credentials.
+- Support a grant type the built-in `"FXNI OAuth Auth Type"` enum does not cover.
+
+**Subscriber stub:**
+```al
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Nexus HTTP Handler", 'OnBeforeAcquireToken', '', false, false)]
+local procedure OnBeforeAcquireToken(var EndpointDef: Record "FXNI Nexus Endpoint Definition"; var Token: SecretText; var IsHandled: Boolean)
+begin
+    // Your logic here.
+end;
+```
+
+---
+
+### 4.4 Codeunit 73710481 "FXNI Attach. Processing"
 
 These events are relevant only for attachment-mode Receive interfaces.
 
@@ -601,6 +728,59 @@ These events are relevant only for attachment-mode Receive interfaces.
 | Attachment | var | Record "FXNI Nexus Attachment" | The attachment record. Check `Attachment."Storage Location"` to decide whether to intervene. |
 | InStr | var | InStream | Provide a valid InStream over the content. |
 | IsHandled | var | Boolean | Set to `true` to replace the default local read. |
+
+---
+
+### 4.5 Codeunit 73710492 "FXNI Nexus Json Path"
+
+This codeunit resolves the deliberately limited path expressions used by nested-document
+interfaces: punctuated segments, each a key name with an optional fixed array index, e.g.
+`header.lines[0].itemNo`. No wildcards, no filters, no functions.
+
+#### `OnResolveJsonPath`
+
+| Attribute | Value |
+|---|---|
+| Fires in | `Resolve()`, before this codeunit's own parser is consulted. `ResolveArray()` goes through `Resolve()` and therefore fires it too. `ValidateExpression()` fires it as well, so an expression in a subscriber-specific syntax is not rejected at data-entry time. |
+| Effect of `IsHandled := true` | This codeunit's own parser does not run for this call. Your subscriber's `Found` and `ResultToken` are the result. |
+
+| Parameter | Direction | Type | Description |
+|---|---|---|---|
+| JsonPath | by value | Text | The expression as entered, unparsed. |
+| SourceJson | var | JsonObject | The object the expression resolves against. Empty when fired from `ValidateExpression()`, which has no JSON yet — only `IsHandled` is read there. |
+| ResultToken | var | JsonToken | The resolved token. Set it only when you also set `Found` to `true`. |
+| Found | var | Boolean | Your resolution outcome. Read only when `IsHandled` is `true`. |
+| IsHandled | var | Boolean | Set to `true` to take over resolution entirely. |
+
+**Typical use case:** Support a path syntax this codeunit does not — a wildcard over all lines, a
+filter on a line field, a function. Handle both call sites: when fired without a `SourceJson`, set
+`IsHandled := true` for expressions in your syntax so they are accepted; when fired with one, resolve.
+
+---
+
+### 4.6 Codeunit 73710479 "FXNI Nexus Setup Management"
+
+#### `OnBeforeCreateWebServiceEntry`
+
+| Attribute | Value |
+|---|---|
+| Fires in | `CreateWebServiceEntry()`, as its first statement. |
+| Effect of `IsHandled := true` | The procedure returns immediately; `OnAfterCreateWebServiceEntry` does not fire. |
+
+| Parameter | Direction | Type | Description |
+|---|---|---|---|
+| IsHandled | var | Boolean | Set to `true` to take over web service registration entirely. |
+
+#### `OnAfterCreateWebServiceEntry`
+
+| Attribute | Value |
+|---|---|
+| Fires in | `CreateWebServiceEntry()`, after the default registration. Does not fire when `OnBeforeCreateWebServiceEntry` set `IsHandled`. |
+
+This event carries no parameters. `CreateWebServiceEntry()` registers nothing by default — it is an
+empty hook. Codeunit 73710475 "FXNI Nexus Webservice" is published by hand on the **Web Services**
+page (see [API Reference]({{ site.baseurl }}/help/api-reference/)). The pair exists so an extension can register the web
+services its own scenario needs at the same point in setup.
 
 ---
 
@@ -828,7 +1008,7 @@ The `id` value `b7749b8c-bd78-496d-b8b0-0d23ce1e94f9` is the BC Nexus app ID fro
 
 ### ID range
 
-BC Nexus occupies IDs **73710475–73710674**. Your dependent extension must use an ID range that does not overlap. If you are publishing to AppSource, you must use a Microsoft-assigned range. For partner/customer extensions, use any non-conflicting range above 50000 that is registered to your publisher.
+BC Nexus occupies IDs **73710475–73710534**. Your dependent extension must use an ID range that does not overlap. If you are publishing to AppSource, you must use a Microsoft-assigned range. For partner/customer extensions, use any non-conflicting range above 50000 that is registered to your publisher.
 
 ### Object and field naming
 
@@ -882,6 +1062,7 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 | ReceiveWithMetadata | `procedure ReceiveWithMetadata(InterfaceCode: Code[20]; RequestData: Text; CorrelationId: Text[100]; IdempotencyKey: Text[100]; ExternalMessageId: Text[100]; ContractVersion: Code[20]; var TransactionEntryNo: Integer): Boolean` | Full-featured receive call. Supports idempotency key deduplication and metadata fields. |
 | ReceiveAttachment | `procedure ReceiveAttachment(InterfaceCode: Code[20]; RecordKey: Text; AttachmentName: Text; ContentType: Text; FileExtension: Text; Base64Content: Text): Boolean` | Convenience method for attachment-mode interfaces. Builds the required JSON payload and calls `Receive()`. |
 | Send | `procedure Send(InterfaceCode: Code[20]): Text` | Creates and immediately processes a Send transaction. Returns the endpoint response text. Errors if the endpoint call fails. |
+| SendWithOptions | `procedure SendWithOptions(InterfaceCode: Code[20]; RequestData: Text): Text` | Same as `Send()`, but `RequestData` carries retrieval options (filter, page, includeCount, envelope) that narrow the records sent; the options are stored on the transaction row. Empty `RequestData` behaves exactly like `Send()`. Commits before processing, so it must not be called from inside a running business transaction. Value parameters only, so the procedure stays visible in the OData metadata. |
 | Publish | `procedure Publish(InterfaceCode: Code[20]; RequestData: Text): Text` | Creates and immediately processes a Publish transaction. Returns the generated payload text. |
 
 **Local procedures (not callable from outside):** `FindExistingByIdempotencyKey`, `OnBeforeReceive`, `OnAfterReceive`.
@@ -907,7 +1088,7 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 | ProcessReceive | `procedure ProcessReceive(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Executes the Receive flow: parses the request, performs PK lookup, and inserts or modifies the target record. |
 | ProcessSend | `procedure ProcessSend(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Executes the Send flow: builds the payload and HTTP-POSTs it to the endpoint. |
 | ProcessPublish | `procedure ProcessPublish(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Executes the Publish flow: builds the payload and stores it in the transaction response. |
-| ParseJsonToFieldRef | `procedure ParseJsonToFieldRef(JsonKey: Text; JsonData: JsonObject; var FRef: FieldRef; DataType: Text)` | Utility: resolves a JSON key (case-insensitive) and assigns its value to the provided FieldRef. Useful in subscriber code that manually parses the request payload. |
+| ParseJsonToFieldRef | `procedure ParseJsonToFieldRef(JsonKey: Text; JsonData: JsonObject; var FRef: FieldRef; DataType: Text): Boolean` | Utility: resolves a JSON key (case-insensitive) and assigns its value to the provided FieldRef. Returns `true` when a value was assigned, `false` when the key is absent, null or empty — the FieldRef then keeps whatever it held before. `DataType` is unused; the type comes from the FieldRef. Useful in subscriber code that manually parses the request payload. |
 | BuildJsonFromRecord | `procedure BuildJsonFromRecord(var RecRef: RecordRef; InterfaceCode: Code[20]): Text` | Utility: serializes a record to a JSON object string using the field mappings **of the given interface**, which it resolves itself. Useful in `OnBeforeBuildSendPayload` subscribers that want to build on top of the standard serialization. The interface code is a mandatory parameter rather than a pre-filtered record: the earlier signature took `var FieldMappings: Record` and discarded the caller's filter internally, so a payload could pick up another interface's JSON keys. |
 | SplitCsvRecords | `procedure SplitCsvRecords(RequestText: Text; Delimiter: Char; var RecordLineNos: List of [Integer]): List of [Text]` | Utility: splits a raw CSV payload into logical records, respecting RFC 4180 quoting — a line break inside a quoted value does not end a record. Returns the record texts; `RecordLineNos` receives, for each returned record, the 1-based physical source line it starts on (header row and blank lines counted). |
 | SplitCsvColumns | `procedure SplitCsvColumns(RecordText: Text; Delimiter: Char): List of [Text]` | Utility: splits one logical CSV record (as returned by `SplitCsvRecords`) into its columns, following RFC 4180 — a quoted value may contain the delimiter, doubled quotation marks (`""`) resolve to one literal quotation mark, quoted values keep their surrounding whitespace, unquoted values are trimmed. |
@@ -921,11 +1102,12 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 | Procedure | Signature | Description |
 |---|---|---|
 | SendRequest | `procedure SendRequest(var EndpointDef: Record "FXNI Nexus Endpoint Definition"; Method: Text; Body: Text; var ResponseText: Text; var HttpStatusCode: Integer): Boolean` | Sends an HTTP request to the endpoint. Handles authentication header injection. Returns `true` if the response is a 2xx status. |
-| AcquireOAuthToken | `procedure AcquireOAuthToken(var EndpointDef: Record "FXNI Nexus Endpoint Definition"): Text` | Acquires or returns a cached OAuth token. Handles token expiry. Stores the token in IsolatedStorage via the endpoint table methods. |
+| AcquireOAuthToken | `procedure AcquireOAuthToken(var EndpointDef: Record "FXNI Nexus Endpoint Definition"): SecretText` | Acquires or returns a cached OAuth token. Handles token expiry. Stores the token in IsolatedStorage via the endpoint table methods. Returns `SecretText`, not `Text`, so the token never materializes as a plain string — a caller that declares a `Text` variable for the result does not compile. |
 | BuildBasicAuthHeader | `procedure BuildBasicAuthHeader(var EndpointDef: Record "FXNI Nexus Endpoint Definition"): SecretText` | Returns a base64-encoded `Basic <credentials>` header value for the endpoint. Returns `SecretText`, not `Text`, so the credentials never materialize as a plain string. |
 | TestConnection | `procedure TestConnection(var EndpointDef: Record "FXNI Nexus Endpoint Definition"): Boolean` | Issues a GET request to the endpoint URL and returns true if the response is 2xx. Used by the Setup page to verify connectivity. |
+| CheckNoPlainTextClientSecret | `procedure CheckNoPlainTextClientSecret(var EndpointDef: Record "FXNI Nexus Endpoint Definition"; BodyTemplate: Text)` | Raises an error if the token request body assigns `client_secret` anything other than the `{{ "{{" }}client_secret}}` placeholder, in form-encoded or JSON spelling. Checks every occurrence; the error never echoes the body or the matched value. Called by the endpoint subpage when the token request body is saved and again before the token request is sent. |
 
-**Local procedures:** `ParseAndAddHeaders`, `OnBeforeSendRequest`, `OnAfterSendRequest`, `OnBeforeAcquireToken`.
+**Local procedures:** `BuildClientCredentialsRequest`, `BuildTokenRequestBody`, `SubstituteClientId`, `SkipAssignmentSeparators`, `IsAssignmentSeparator`, `ApplyTimeout`, `ParseAndAddHeaders`, `CheckNoSystemHeaderConfigured`, `GetSystemManagedHeaders`, `OnBeforeSendRequest`, `OnAfterSendRequest`, `OnBeforeAcquireToken`.
 
 ---
 
@@ -938,6 +1120,7 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 | CreateJobQueueEntry | `procedure CreateJobQueueEntry()` | Creates the recurring job queue entry for Codeunit 73710476 if Auto. Process Transactions is enabled. |
 | DeleteJobQueueEntry | `procedure DeleteJobQueueEntry()` | Removes all job queue entries for Codeunit 73710476. |
 | LoadSampleData | `procedure LoadSampleData()` | Inserts the built-in sample endpoint and Currency import interface. Safe to call multiple times — uses `Get()` guards. |
+| ClearAllStoredCredentials | `procedure ClearAllStoredCredentials(): Integer` | Removes the stored client secrets and access tokens of every endpoint in the current company from Isolated Storage and returns how many endpoints had something to remove. The documented step before uninstalling: AL has no uninstall trigger, and once the endpoint rows are gone the keys are unreachable. Company-scoped — repeat it per company. |
 
 ---
 
@@ -950,6 +1133,37 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 | RetrieveAttachmentContent | `procedure RetrieveAttachmentContent(var Attachment: Record "FXNI Nexus Attachment"; var InStr: InStream)` | Provides an InStream over the attachment content. Raises `OnBeforeRetrieveContent` so external storage providers can intercept. |
 | CheckExternalStorageComplete | `procedure CheckExternalStorageComplete(var Attachment: Record "FXNI Nexus Attachment")` | Refuses an attachment whose Storage Location is External but whose External Reference is empty. Called after an `OnBeforeStoreContent` subscriber has handled the content, so a subscriber that moves a file out of Business Central without naming where it went fails loudly instead of leaving an unreadable attachment behind. |
 | TryRetrieveExternalContent | `procedure TryRetrieveExternalContent(var Attachment: Record "FXNI Nexus Attachment"; var InStr: InStream): Boolean` | Fires `OnBeforeRetrieveContent` and reports whether a subscriber actually supplied the stream, instead of silently falling back to the local blob. `RetrieveAttachmentContent` delegates here, so the event is still raised in exactly one place. Call it when "no external handler installed" has to become a decision — for an externally stored attachment there is no local blob to fall back to. |
+
+---
+
+### Codeunit 73710490 "FXNI Nexus Query Options"
+
+Reads the options object a caller may put into the request data of a Send or Publish call. Split in two on purpose: the parsing half touches no table, the resolving half needs the interface's field mapping.
+
+| Procedure | Signature | Description |
+|---|---|---|
+| ParseOptions | `procedure ParseOptions(RequestData: Text)` | Reads filter conditions, paging wish, count and envelope flags out of the request data. No database access, so it can run before the interface or its table are known. Blank request data leaves the instance empty and `HasOptions()` false — the compatibility path. Request data that is not a JSON **object** is an error, not "no options". |
+| ResolveKeys | `procedure ResolveKeys(InterfaceCode: Code[20]; TableNo: Integer)` | Translates the caller's JSON keys into field numbers through the interface's field mapping, which is the allow-list. Raises the same error for a key the interface does not expose and for one it exposes with a static value. `TableNo` 0 skips the check that the mapped field still exists. |
+| GetFilters | `procedure GetFilters(var TempFilter: Record "FXNI Nexus Interface Filter" temporary)` | Empties the passed temporary record and fills it with the parsed and resolved conditions. |
+| GetPageSize | `procedure GetPageSize(): Integer` | The page size the caller asked for, `0` if none. `0` is not "no rows" — the processing turns it into the interface's own maximum. |
+| GetPageToken | `procedure GetPageToken(): Text` | The continuation token the caller sent, empty if none. |
+| GetIncludeCount | `procedure GetIncludeCount(): Boolean` | Whether the caller asked for the total number of matching records. |
+| GetEnvelope | `procedure GetEnvelope(): Boolean` | Whether the answer is wrapped in the envelope. True unless the caller explicitly sent `"envelope": false`. |
+| HasOptions | `procedure HasOptions(): Boolean` | Whether an options object was present at all. |
+
+---
+
+### Codeunit 73710492 "FXNI Nexus Json Path"
+
+Resolves the `Json Path` of a field mapping against an incoming payload. No database access, so it is unit-testable on its own. The grammar is deliberately small: punctuated segments, each a key name with an optional fixed array index (`header.lines[0].itemNo`) — no wildcards, no filters, no functions, no leading `$`, and not RFC 6901. Key matching is case-insensitive, like the flat `Json Key` lookup.
+
+| Procedure | Signature | Description |
+|---|---|---|
+| Resolve | `procedure Resolve(RootObject: JsonObject; PathExpression: Text; var ResultToken: JsonToken): Boolean` | Returns the token the path points at, whatever its shape. `false` for an invalid expression, a missing key, an index outside the array, or an intermediate node that is neither object nor array — never an error, so `Mandatory` on the field mapping keeps deciding what a missing value means. |
+| ResolveArray | `procedure ResolveArray(RootObject: JsonObject; PathExpression: Text; var ResultArray: JsonArray): Boolean` | Same, but only succeeds when the resolved token is an array. |
+| ValidateExpression | `procedure ValidateExpression(PathExpression: Text): Boolean` | Checks the syntax without resolving anything. Used by the `OnValidate` of the `Json Path` field and once per transaction by `LoadFieldMappings`, so an expression written past the page — RapidStart, a direct write — is still caught before the first record is touched. |
+
+**Event:** `OnResolveJsonPath(JsonPath: Text; var SourceJson: JsonObject; var ResultToken: JsonToken; var Found: Boolean; var IsHandled: Boolean)` — the extensibility point for a syntax this codeunit deliberately does not support (wildcards, filters, functions). It fires once per `Resolve` call, before the built-in parser is consulted; set `IsHandled` to take resolution over entirely and `Found` becomes what `Resolve` returns. `ValidateExpression` fires it too, with an empty `SourceJson`, so a subscriber's own syntax is not rejected as invalid before it can ever be used.
 
 ---
 
