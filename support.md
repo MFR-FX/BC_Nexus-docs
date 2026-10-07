@@ -7,9 +7,9 @@ permalink: /support/
 
 **Publisher:** fx-its (Marco Frerix)  
 **Support email:** support@fx-its.de  
-**Support portal:** Ticket portal (Jira Service Management) — the address is published here as soon as it is live  
+**Support portal:** https://fx-its.atlassian.net/servicedesk/customer/portal/1  
 **Documentation:** https://mfr-fx.github.io/BC_Nexus-docs/help/  
-**Last updated:** 2026-09-13
+**Last updated:** 2026-10-07
 
 ---
 
@@ -37,9 +37,13 @@ Send an email to **support@fx-its.de** with the subject line `[BC Nexus] <brief 
 
 Incomplete reports will be asked to provide the missing information before investigation begins.
 
-### Step 3 — Ticket portal (once live)
+Every email to this address is logged as a request in our ticket system (Jira Service Management).
 
-Support is moving to a ticket portal (Jira Service Management). Until the address is published here, use email (Step 2) — it is tracked and answered the same way.
+### Step 3 — Ticket portal
+
+As an alternative to email, open a request in the ticket portal: https://fx-its.atlassian.net/servicedesk/customer/portal/1
+
+On your first request you create an account with your email address; afterwards you can follow all your requests there. Requests from the portal and from email (Step 2) are handled the same way.
 
 ---
 

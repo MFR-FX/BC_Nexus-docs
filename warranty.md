@@ -7,7 +7,7 @@ permalink: /warranty/
 
 **Publisher:** fx-its (Marco Frerix)  
 **Contact:** support@fx-its.de  
-**Last updated:** 2026-09-13
+**Last updated:** 2026-10-07
 
 ---
 
@@ -45,7 +45,7 @@ This warranty does **not** cover:
 
 To make a warranty claim during the Warranty Period:
 
-1. Email **support@fx-its.de** with the subject line `[BC Nexus] Warranty Claim` (or use the ticket portal once it is live — see [Support]({{ site.baseurl }}/support/)).
+1. Email **support@fx-its.de** with the subject line `[BC Nexus] Warranty Claim` (or open a request in the [ticket portal](https://fx-its.atlassian.net/servicedesk/customer/portal/1) — see [Support]({{ site.baseurl }}/support/)).
 2. Describe the defect and how it deviates from the documented behavior.
 3. Include your installation date and the BC Nexus version (from the extension management page in Business Central).
 
@@ -81,4 +81,4 @@ EXCEPT AS EXPRESSLY SET FORTH IN THIS WARRANTY, BC NEXUS IS PROVIDED "AS IS." FX
 
 **fx-its — Marco Frerix**  
 Email: support@fx-its.de  
-Ticket portal: published here once live — see [Support]({{ site.baseurl }}/support/)
+Ticket portal: https://fx-its.atlassian.net/servicedesk/customer/portal/1 — see also [Support]({{ site.baseurl }}/support/)
