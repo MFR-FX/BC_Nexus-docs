@@ -68,9 +68,9 @@ For the first 90 days after installation, bugs in core functionality are covered
 
 ## Security Vulnerabilities
 
-Report security vulnerabilities by e-mail to **support@fx-its.de** — never through the ticket portal.
+Report security vulnerabilities like any other request — by email to **support@fx-its.de** (Step 2) or in the [ticket portal](https://fx-its.atlassian.net/servicedesk/customer/portal/1) (Step 3). Keep the report confidential: do not copy anyone else on the email, keep the portal request private (do not share it with your organization or add participants), and do not disclose details publicly until a fix is available or we have agreed on a disclosure date. A request handled this way is visible only to you and to us.
 
-**Subject line:** `[BC Nexus] <brief description>`
+**Subject line (email) / Summary (portal):** `[BC Nexus] Security: <brief description>`
 
 ---
 
