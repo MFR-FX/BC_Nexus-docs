@@ -1145,6 +1145,15 @@ Reads the options object a caller may put into the request data of a Send or Pub
 
 ---
 
+### Codeunit 73710500 "FXNI Mapping Suggester"
+
+The two deterministic steps of the Copilot mapping assistant, public since 27.7.2.0 (DEV-190) so that they can be tested and reused without a language model. The model round trip itself (`SuggestMapping`) and the capability check stay internal. Neither procedure writes to a table.
+
+| Procedure | Signature | Description |
+|---|---|---|
+| ExtractSampleStructure | `procedure ExtractSampleStructure(InterfaceCode: Code[20]; SampleText: Text; var StructureJson: JsonArray; var ErrorText: Text): Boolean` | Reads the first record of a JSON or CSV sample for the interface and returns its keys or columns with position and sample value. Returns false with a reason in `ErrorText` instead of raising an error. |
+| ParseCompletion | `procedure ParseCompletion(CompletionText: Text; var ProposalJson: JsonArray; var ErrorText: Text): Boolean` | Parses a model answer (optionally in a code fence) into mapping proposals and drops elements that are not well-formed. Returns false if nothing usable remains. |
+
 ### Codeunit 73710492 "FXNI Nexus Json Path"
 
 Resolves the `Json Path` of a field mapping against an incoming payload. No database access, so it is unit-testable on its own. The grammar is deliberately small: punctuated segments, each a key name with an optional fixed array index (`header.lines[0].itemNo`) — no wildcards, no filters, no functions, no leading `$`, and not RFC 6901. Key matching is case-insensitive, like the flat `Json Key` lookup.
