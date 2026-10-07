@@ -437,31 +437,35 @@ Before removing the extension:
    filter Object Type to Run = Codeunit and Object ID to Run = 73710476) in case one was created
    outside the Setup page action, and remove it as well.
 3. On the **BC Nexus Setup** page, choose **Delete All Credentials**. This removes the stored
-   Client Secret and Access Token of every endpoint in the current company and clears the token
-   expiry stamp. It asks for confirmation first, and it keeps the endpoints themselves — the
-   only cost of running it by mistake is entering the secrets again.
+   Client Secret and Access Token of every endpoint a BC Nexus interface uses in the current
+   company and clears the token expiry stamp. It asks for confirmation first, and it keeps the
+   endpoints themselves — the only cost of running it by mistake is entering the secrets again.
+   Endpoints that no BC Nexus interface uses are not touched: since 27.7.0.0 endpoints belong to
+   the library app FXI Core, and another app built on it may still need them.
 
    **Repeat it in every company that has endpoints.** The keys are written with
    `DataScope::Company`, so one run covers one company.
 
-   This is the step that has no automatic equivalent, and the reason is worth knowing: Isolated
-   Storage cannot be enumerated. A key is only reachable through the code that rebuilds it from
-   the endpoint code, so once the endpoint rows are gone — uninstalled, or the company deleted —
-   nothing can find those keys again, not even a fresh installation of BC Nexus. Running this
-   while the rows still exist is the only moment the values are reachable.
+   Endpoints and their keys live in FXI Core, so uninstalling BC Nexus alone leaves them in place
+   and reachable. The step matters when FXI Core is removed as well: Isolated Storage cannot be
+   enumerated, a key is only reachable through the code that rebuilds it from the endpoint code,
+   and once the endpoint rows are gone — FXI Core uninstalled, or the company deleted — nothing
+   can find those keys again.
 4. Delete the interfaces and endpoints you no longer need before uninstalling. Deleting an
    Endpoint Definition removes its stored Client Secret and Access Token from Isolated Storage.
    This covers a deletion that runs the table's triggers, which is what deleting a line on the
    Endpoint Definitions page does. A `DeleteAll()` without triggers, uninstalling the extension,
    and deleting the company do not run it, and leave both keys behind until the extension data
-   is removed via **Delete Extension Data**.
+   of FXI Core is removed via **Delete Extension Data**.
 
 **What uninstalling removes, and what it does not.** AL has no uninstall trigger for a
 per-tenant extension on Business Central Online — there is no `OnUninstallAppPerCompany()` or
 equivalent hook, so there is no automatic cleanup step the extension can run as part of removal.
 Uninstalling BC Nexus through Extension Management stops the extension from running but leaves
-all table data (setup, interfaces, endpoints, field mappings, the transaction log, and any
-attachments) in place. To remove that data as well, use **Delete Extension Data** in Extension
+all table data (setup, interfaces, field mappings, the transaction log, and any attachments) in
+place. Endpoints, their credentials and the activity log are not BC Nexus data at all: they
+belong to FXI Core and stay untouched until FXI Core itself is uninstalled and its extension data
+deleted. To remove that data as well, use **Delete Extension Data** in Extension
 Management after uninstalling — this is a separate, explicit step, not something uninstalling
 does on its own.
 

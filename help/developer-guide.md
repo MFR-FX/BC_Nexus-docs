@@ -82,23 +82,26 @@ One row per configured interface.
 | CSV Has Header Row | Boolean | When true, the first non-empty line of the incoming CSV file is treated as column headers and skipped — it is not imported as a record. Only used when Field Mapping Type is CSV. |
 | Always Create New Entries | Boolean | When true, every received transaction inserts a new record. No PK lookup is performed. |
 | Entry Based Table | Boolean | For tables with auto-increment PKs (e.g. G/L Entry). Receive always inserts; Send/Publish omit the PK from the outbound payload. |
-| Endpoint Code | Code[20] | FK to "FXNI Nexus Endpoint Definition". Required for Send and Publish. |
+| Endpoint Code | Code[20] | FK to "FXNC Endpoint Definition" in FXI Core. Required for Send and Publish. |
 | Attachment Mode | Boolean | When true (Receive only), the transaction stores a file rather than writing to table fields. |
 
-### Table 73710478 "FXNI Nexus Endpoint Definition"
+### Table 73710535 "FXNC Endpoint Definition" (FXI Core)
 
-One row per external HTTP endpoint.
+One row per external HTTP endpoint. Since 27.7.0.0 the table belongs to the library app FXI Core,
+which BC Nexus depends on (namespace `FxIts.Core.Transport`); BC Nexus ships no endpoint table of
+its own. Client secret and access token sit in the IsolatedStorage of FXI Core.
 
 | Field | Type | Purpose |
 |---|---|---|
 | Code | Code[20] | PK. |
 | Description | Text[250] | Human-readable description. |
 | Endpoint URL | Text[250] | Target URL for outbound requests. |
-| Authentication Type | Enum "FXNI Authentication Type" | `None`, `Basic Auth`, or `OAuth 2.0`. |
+| Authentication Type | Enum "FXNC Authentication Type" | `None`, `Basic Auth`, or `OAuth 2.0`. |
+| Transport Type | Enum "FXNC Transport Type" | Selects the `interface "FXNC ITransport"` implementation. Today only HTTP exists. |
 | Client ID | Text[250] | OAuth client ID. |
 | Token URL | Text[250] | OAuth token endpoint. |
-| OAuth Auth Type | Enum "FXNI OAuth Auth Type" | `Client Credentials` — the only value the enum defines. Read and enforced by `AcquireOAuthToken`: an unhandled value raises an error instead of being ignored. |
-| HTTP Timeout (ms) | Integer | Request timeout in ms for this endpoint, applied by `SendRequest` and `AcquireOAuthToken` alike. `0` = platform default, otherwise 1000–300000 (`OnValidate` enforces the range; `ApplyTimeout` re-checks it before use). Defaults to 30000 on new records. |
+| OAuth Auth Type | Enum "FXNC OAuth Auth Type" | `Client Credentials` — the only value the enum defines. Read and enforced by `AcquireOAuthToken`: an unhandled value raises an error instead of being ignored. |
+| HTTP Timeout (ms) | Integer | Request timeout in ms for this endpoint, applied by `Send` and `AcquireOAuthToken` alike. `0` = platform default, otherwise 1000–300000 (`OnValidate` enforces the range; `ApplyTimeout` re-checks it before use). Defaults to 30000 on new records. |
 | Token Expires At | DateTime | Cached token expiry. Managed automatically. Read-only. |
 | Token Request Body | Blob | JSON body sent to Token URL. Written via `SetTokenRequestBody()`. |
 | Token Request Headers | Blob | Additional headers for token requests. Written via `SetTokenRequestHeaders()`. |
@@ -274,7 +277,9 @@ Both outgoing paths read the options object out of the **transaction's own reque
 
 All integration events use `[IntegrationEvent(false, false)]`. Neither parameter is `true`, meaning there is no global publisher and no inheritance. Subscribe with a standard `[EventSubscriber]` attribute.
 
-BC Nexus exposes events across six codeunits. They are grouped below by codeunit.
+BC Nexus exposes events across five codeunits of its own. The transport events in 4.3 are published
+by FXI Core, the library app BC Nexus depends on; they are listed here because every outbound call
+of BC Nexus passes through them. They are grouped below by codeunit.
 
 ### Namespaces and `using` directives
 
@@ -285,7 +290,7 @@ BC Nexus objects are organized into namespaces under `FxIts.BCNexus`. A subscrib
 | `FxIts.BCNexus` | FXNI Nexus Install, FXNI Nexus Upgrade, FXNI Nexus Record Key Mgt., all three permission sets |
 | `FxIts.BCNexus.Setup` | Table and page "FXNI Nexus Setup", FXNI Nexus Setup Management |
 | `FxIts.BCNexus.Interfaces` | "FXNI Nexus Interface Def.", "FXNI Nexus Field Map Def.", "FXNI Nexus Interface Filter", the enums "FXNI Interface Type", "FXNI Field Mapping Type" and "FXNI Filter Operator", the interface, field mapping and filter pages |
-| `FxIts.BCNexus.Transport` | "FXNI Nexus Endpoint Definition", the enums "FXNI Authentication Type" and "FXNI OAuth Auth Type", "FXNI Nexus HTTP Handler" |
+| `FxIts.Core.Transport` (FXI Core, separate app) | "FXNC Endpoint Definition", the enums "FXNC Authentication Type", "FXNC OAuth Auth Type" and "FXNC Transport Type", `interface "FXNC ITransport"`, "FXNC HTTP Handler" — since 27.7.0.0 BC Nexus depends on FXI Core instead of shipping these itself |
 | `FxIts.BCNexus.Transactions` | "FXNI Nexus Transaction List", the enum "FXNI Transaction Status", "FXNI Nexus Webservice", "FXNI Txn. Proc. Job", "FXNI Txn. Processing", "FXNI Nexus Query Options", "FXNI Nexus Json Path" |
 | `FxIts.BCNexus.Attachments` | "FXNI Nexus Attachment", the enum "FXNI Attach. Store", "FXNI Attach. Processing", the ten page extensions |
 | `FxIts.BCNexus.Test` | The test codeunit and the HTTP mock |
@@ -579,10 +584,11 @@ end;
 
 ---
 
-### 4.3 Codeunit 73710478 "FXNI Nexus HTTP Handler"
+### 4.3 Codeunit 73710537 "FXNC HTTP Handler" (FXI Core)
 
-These events sit on the outbound HTTP path. `SendRequest()` is reached from the Send flow
-(`ProcessSend()` in "FXNI Txn. Processing") and from every connection test — the **Test Connection**
+These events sit on the outbound HTTP path. `Send()` is reached from the Send flow
+(`ProcessSend()` in "FXNI Txn. Processing" calls `Send()` through `interface "FXNC ITransport"`, resolved
+from the endpoint's **Transport Type**, with source code `NEXUS` and the transaction entry number as reference) and from every connection test — the **Test Connection**
 action on the endpoint subpage and on the interface subpage as well as `TestConnection()` on codeunit 73710498 "FXNI Config API". A subscriber here
 sees all of them; `OnBeforeSendRequest` only gets the request, so narrow on the request URI when you
 mean just one endpoint.
@@ -591,8 +597,8 @@ mean just one endpoint.
 
 | Attribute | Value |
 |---|---|
-| Fires in | `SendRequest()`, after the request URI, body, authentication header and the configured endpoint headers are all set on `HttpRequest`, and immediately before the timeout is applied and `HttpClient.Send()` is called. For an OAuth 2.0 endpoint the token has already been acquired at this point. |
-| Effect of `IsHandled := true` | No request is sent. `SendRequest()` sets `HttpStatusCode := 200`, returns `true`, and leaves the caller's `ResponseText` **untouched** — if your subscriber replaces the call, it has to deliver the response payload some other way, because it cannot write into `ResponseText` from here. |
+| Fires in | `Send()`, after the request URI, body, authentication header and the configured endpoint headers are all set on `HttpRequest`, and immediately before the timeout is applied and `HttpClient.Send()` is called. For an OAuth 2.0 endpoint the token has already been acquired at this point. |
+| Effect of `IsHandled := true` | No request is sent. `Send()` sets `StatusCode := 200`, returns `true`, and leaves the caller's `ResponseText` **untouched** — if your subscriber replaces the call, it has to deliver the response payload some other way, because it cannot write into `ResponseText` from here. |
 
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
@@ -606,7 +612,7 @@ mean just one endpoint.
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Nexus HTTP Handler", 'OnBeforeSendRequest', '', false, false)]
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNC HTTP Handler", 'OnBeforeSendRequest', '', false, false)]
 local procedure OnBeforeSendRequest(var HttpRequest: HttpRequestMessage; var IsHandled: Boolean)
 begin
     // Your logic here.
@@ -619,7 +625,7 @@ end;
 
 | Attribute | Value |
 |---|---|
-| Fires in | `SendRequest()`, after `HttpClient.Send()` has returned successfully and **before** the status code and the response body are read out into the caller's `HttpStatusCode` and `ResponseText`. A transport failure — `HttpClient.Send()` returning `false` — exits earlier and does **not** raise this event. |
+| Fires in | `Send()`, after `HttpClient.Send()` has returned successfully and **before** the status code and the response body are read out into the caller's `StatusCode` and `ResponseText`. A transport failure — `HttpClient.Send()` returning `false` — exits earlier and does **not** raise this event. |
 
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
@@ -632,7 +638,7 @@ end;
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Nexus HTTP Handler", 'OnAfterSendRequest', '', false, false)]
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNC HTTP Handler", 'OnAfterSendRequest', '', false, false)]
 local procedure OnAfterSendRequest(var HttpResponse: HttpResponseMessage)
 begin
     // Your logic here.
@@ -650,18 +656,18 @@ end;
 
 | Parameter | Direction | Type | Description |
 |---|---|---|---|
-| EndpointDef | var | Record "FXNI Nexus Endpoint Definition" | The endpoint the token is needed for. |
+| Endpoint | var | Record "FXNC Endpoint Definition" | The endpoint the token is needed for. |
 | Token | var | SecretText | The token your subscriber supplies. `SecretText`, not `Text`, on purpose: the value must never exist as a plain string on the way back, which is the same guarantee `BuildBasicAuthHeader` keeps for Basic auth. |
 | IsHandled | var | Boolean | Set to `true` to use your token instead of the built-in OAuth flow. |
 
 **Typical use cases:**
 - Fetch the token from a managed identity or a company-wide token service instead of the endpoint's own client credentials.
-- Support a grant type the built-in `"FXNI OAuth Auth Type"` enum does not cover.
+- Support a grant type the built-in `"FXNC OAuth Auth Type"` enum does not cover.
 
 **Subscriber stub:**
 ```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNI Nexus HTTP Handler", 'OnBeforeAcquireToken', '', false, false)]
-local procedure OnBeforeAcquireToken(var EndpointDef: Record "FXNI Nexus Endpoint Definition"; var Token: SecretText; var IsHandled: Boolean)
+[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNC HTTP Handler", 'OnBeforeAcquireToken', '', false, false)]
+local procedure OnBeforeAcquireToken(var Endpoint: Record "FXNC Endpoint Definition"; var Token: SecretText; var IsHandled: Boolean)
 begin
     // Your logic here.
 end;
@@ -1097,20 +1103,6 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 
 ---
 
-### Codeunit 73710478 "FXNI Nexus HTTP Handler"
-
-| Procedure | Signature | Description |
-|---|---|---|
-| SendRequest | `procedure SendRequest(var EndpointDef: Record "FXNI Nexus Endpoint Definition"; Method: Text; Body: Text; var ResponseText: Text; var HttpStatusCode: Integer): Boolean` | Sends an HTTP request to the endpoint. Handles authentication header injection. Returns `true` if the response is a 2xx status. |
-| AcquireOAuthToken | `procedure AcquireOAuthToken(var EndpointDef: Record "FXNI Nexus Endpoint Definition"): SecretText` | Acquires or returns a cached OAuth token. Handles token expiry. Stores the token in IsolatedStorage via the endpoint table methods. Returns `SecretText`, not `Text`, so the token never materializes as a plain string — a caller that declares a `Text` variable for the result does not compile. |
-| BuildBasicAuthHeader | `procedure BuildBasicAuthHeader(var EndpointDef: Record "FXNI Nexus Endpoint Definition"): SecretText` | Returns a base64-encoded `Basic <credentials>` header value for the endpoint. Returns `SecretText`, not `Text`, so the credentials never materialize as a plain string. |
-| TestConnection | `procedure TestConnection(var EndpointDef: Record "FXNI Nexus Endpoint Definition"): Boolean` | Issues a GET request to the endpoint URL and returns true if the response is 2xx. Used by the Setup page to verify connectivity. |
-| CheckNoPlainTextClientSecret | `procedure CheckNoPlainTextClientSecret(var EndpointDef: Record "FXNI Nexus Endpoint Definition"; BodyTemplate: Text)` | Raises an error if the token request body assigns `client_secret` anything other than the `{{ "{{" }}client_secret}}` placeholder, in form-encoded or JSON spelling. Checks every occurrence; the error never echoes the body or the matched value. Called by the endpoint subpage when the token request body is saved and again before the token request is sent. |
-
-**Local procedures:** `BuildClientCredentialsRequest`, `BuildTokenRequestBody`, `SubstituteClientId`, `SkipAssignmentSeparators`, `IsAssignmentSeparator`, `ApplyTimeout`, `ParseAndAddHeaders`, `CheckNoSystemHeaderConfigured`, `GetSystemManagedHeaders`, `OnBeforeSendRequest`, `OnAfterSendRequest`, `OnBeforeAcquireToken`.
-
----
-
 ### Codeunit 73710479 "FXNI Nexus Setup Management"
 
 | Procedure | Signature | Description |
@@ -1165,6 +1157,26 @@ Resolves the `Json Path` of a field mapping against an incoming payload. No data
 
 **Event:** `OnResolveJsonPath(JsonPath: Text; var SourceJson: JsonObject; var ResultToken: JsonToken; var Found: Boolean; var IsHandled: Boolean)` — the extensibility point for a syntax this codeunit deliberately does not support (wildcards, filters, functions). It fires once per `Resolve` call, before the built-in parser is consulted; set `IsHandled` to take resolution over entirely and `Found` becomes what `Resolve` returns. `ValidateExpression` fires it too, with an empty `SourceJson`, so a subscriber's own syntax is not rejected as invalid before it can ever be used.
 
+### FXI Core APIs used by BC Nexus
+
+The objects below belong to the FXI Core library app, not to BC Nexus. They are listed because BC Nexus depends on them; their contract is owned by FXI Core.
+
+### Codeunit 73710537 "FXNC HTTP Handler" (FXI Core)
+
+Part of FXI Core since 27.7.0.0; listed because BC Nexus calls it for every outbound request.
+
+| Procedure | Signature | Description |
+|---|---|---|
+| Send | `procedure Send(var Endpoint: Record "FXNC Endpoint Definition"; Method: Text; Body: Text; SourceCode: Code[20]; Reference: Text[100]; var ResponseText: Text; var StatusCode: Integer): Boolean` | Implements `interface "FXNC ITransport"`. Sends an HTTP request to the endpoint, handles authentication header injection and writes one row to the FXI Core activity log with `SourceCode` and `Reference` (BC Nexus passes `NEXUS` and the transaction entry number). The row is written in the caller's transaction: `ProcessSend` raises an error after a failed send, which rolls the row back, so the log shows successful NEXUS sends only. Returns `true` if the response is a 2xx status. |
+| AcquireOAuthToken | `procedure AcquireOAuthToken(var Endpoint: Record "FXNC Endpoint Definition"): SecretText` | Acquires or returns a cached OAuth token. Handles token expiry. Stores the token in IsolatedStorage via the endpoint table methods. Returns `SecretText`, not `Text`, so the token never materializes as a plain string — a caller that declares a `Text` variable for the result does not compile. |
+| BuildBasicAuthHeader | `procedure BuildBasicAuthHeader(var Endpoint: Record "FXNC Endpoint Definition"): SecretText` | Returns a base64-encoded `Basic <credentials>` header value for the endpoint. Returns `SecretText`, not `Text`, so the credentials never materialize as a plain string. |
+| TestConnection | `procedure TestConnection(var Endpoint: Record "FXNC Endpoint Definition"): Boolean` | Calls `Send()` with GET and source code `CORE-TEST` and returns true if the response is 2xx. Used by the Setup page to verify connectivity. |
+| CheckNoPlainTextClientSecret | `procedure CheckNoPlainTextClientSecret(var Endpoint: Record "FXNC Endpoint Definition"; BodyTemplate: Text)` | Raises an error if the token request body assigns `client_secret` anything other than the `{{ "{{" }}client_secret}}` placeholder, in form-encoded or JSON spelling. Checks every occurrence; the error never echoes the body or the matched value. Called by the endpoint subpage when the token request body is saved and again before the token request is sent. |
+
+**Local procedures:** `BuildClientCredentialsRequest`, `BuildTokenRequestBody`, `SubstituteClientId`, `SkipAssignmentSeparators`, `IsAssignmentSeparator`, `ApplyTimeout`, `ParseAndAddHeaders`, `CheckNoSystemHeaderConfigured`, `GetSystemManagedHeaders`, `OnBeforeSendRequest`, `OnAfterSendRequest`, `OnBeforeAcquireToken`.
+
+---
+
 ---
 
 ## 8. Permission Sets
@@ -1173,11 +1185,11 @@ BC Nexus ships with three assignable permission sets. The split follows one rule
 
 ### FXNI Nexus Admin (Per 73710475)
 
-Full RIMD access to all BC Nexus configuration and transaction tables, plus execute rights on all BC Nexus codeunits and pages. The only set that can execute `FXNI Nexus Setup Management` and page `FXNI Set Secret Dialog`, and therefore the only set that can register or replace endpoint credentials, publish the web service, create the job queue entry, or load the sample interface. Assign to the BC Nexus administrator user.
+Full RIMD access to all BC Nexus configuration and transaction tables, plus execute rights on all BC Nexus codeunits and pages. The only set that can execute `FXNI Nexus Setup Management` and — through the included FXI Core admin set — page `FXNC Set Secret Dialog`, and therefore the only set that can register or replace endpoint credentials, publish the web service, create the job queue entry, or load the sample interface. Assign to the BC Nexus administrator user.
 
 ### FXNI Nexus User (Per 73710476)
 
-Read-only access to configuration tables. Read and modify access to the transaction list (allowing users to cancel or reset transactions). No codeunit execute rights at all: this set cannot call `FXNI Nexus Webservice`, `FXNI Txn. Processing`, `FXNI Attach. Processing` or `FXNI Nexus HTTP Handler`, so it cannot run any interface — Send, Receive or Publish — and the "Process Manually" action on the transaction pages fails for it with a permission error by design. A failed transaction is retried with "Reset Status" instead, which only writes the journal row; the job queue then reprocesses the transaction under its own account. Assign to users who monitor integrations but do not configure them or trigger interfaces themselves.
+Read-only access to configuration tables. Read and modify access to the transaction list (allowing users to cancel or reset transactions). No codeunit execute rights at all: this set cannot call `FXNI Nexus Webservice`, `FXNI Txn. Processing`, `FXNI Attach. Processing` or `FXNC HTTP Handler` (FXI Core), so it cannot run any interface — Send, Receive or Publish — and the "Process Manually" action on the transaction pages fails for it with a permission error by design. A failed transaction is retried with "Reset Status" instead, which only writes the journal row; the job queue then reprocesses the transaction under its own account. Assign to users who monitor integrations but do not configure them or trigger interfaces themselves.
 
 ### FXNI Nexus Integr. (Per 73710477, caption "BC Nexus Integration")
 
