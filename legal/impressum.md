@@ -7,7 +7,7 @@ permalink: /legal/impressum/
 
 **Anbieter:** fx-its (Marco Frerix)  
 **Kontakt:** mfr@fx-its.de  
-**Stand:** 2026-09-16
+**Stand:** 2026-10-07
 
 *This page is the provider identification required by German law (§ 5 DDG) and is therefore written in German. For product support see [Support]({{ site.baseurl }}/support/).*
 
@@ -27,11 +27,19 @@ Produktsupport: support@fx-its.de (siehe [Support]({{ site.baseurl }}/support/))
 
 ## Umsatzsteuer
 
-Von der Umsatzsteuer befreit gemäß § 19 UStG.
+Von der Umsatzsteuer befreit gemäß § 19 UStG. Eine Umsatzsteuer-Identifikationsnummer nach § 27a UStG wird daher nicht ausgewiesen.
+
+## Registereintrag
+
+Nicht im Handelsregister eingetragen.
 
 ## Unternehmensform
 
 Einzelunternehmen
+
+## Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV
+
+Marco Frerix, Anschrift wie oben.
 
 ## Verbraucherstreitbeilegung
 

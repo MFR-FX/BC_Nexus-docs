@@ -58,6 +58,12 @@ On your first request you create an account with your email address; afterwards 
 
 Response times are best-effort commitments. For customers with active support agreements, different SLAs apply.
 
+## Included Support and Services
+
+Each licensed production environment includes **2 hours of support per contract year** through the portal or by email: configuration questions, analysis of integration errors and help with the documented features. Bug fixes in BC Nexus itself never count against these hours.
+
+Beyond the included hours, support is billed at **120 EUR per hour**, either per request after your confirmation or as a prepaid hour contingent. Setting up interfaces for you is a separate service, offered on request and billed by effort at the same rate. Unused included hours do not carry over to the next contract year. All prices are final prices: as a small business under § 19 UStG, fx-its does not charge VAT.
+
 ---
 
 ## Warranty Coverage

@@ -13,7 +13,7 @@ permalink: /warranty/
 
 ## 1. Warranty Duration
 
-fx-its warrants BC Nexus against material defects in its core functionality for a period of **90 days** from the date of initial installation in your Business Central environment (the "Warranty Period").
+This Limited Warranty is a voluntary service commitment by fx-its. It supplements the statutory warranty rights (see Section 7) and does not restrict them. fx-its warrants BC Nexus against material defects in its core functionality for a period of **90 days** from the date of initial installation in your Business Central environment (the "Warranty Period").
 
 ---
 
@@ -37,7 +37,7 @@ This warranty does **not** cover:
 - Features or behaviors not explicitly documented in the BC Nexus documentation.
 - Business Central platform bugs, Microsoft SaaS outages, or changes to the BC platform that break previously working behavior.
 - Issues arising from use of the extension outside the documented scope or on unsupported BC platform versions.
-- Defects reported after the Warranty Period has expired.
+- Defects reported after the Warranty Period has expired (statutory rights remain unaffected, see Section 7).
 
 ---
 
@@ -55,13 +55,13 @@ fx-its will acknowledge warranty claims within **5 business days** and provide a
 
 ## 5. Remedy
 
-If a covered defect is confirmed, fx-its will, at its sole discretion:
+If a covered defect is confirmed, fx-its will, at its choice:
 
 - Provide a corrected version of the extension, or
 - Provide a documented workaround, or
 - Issue a refund of any purchase price paid (if applicable).
 
-These remedies are the **sole and exclusive remedies** for any breach of this warranty.
+These remedies do not restrict the customer's statutory rights (see Section 7). The limitation of liability in Section 6 of the [EULA]({{ site.baseurl }}/legal/eula/) applies.
 
 ---
 
@@ -71,9 +71,9 @@ After the Warranty Period expires, support requests and bug reports are still ac
 
 ---
 
-## 7. Disclaimer
+## 7. Statutory Warranty
 
-EXCEPT AS EXPRESSLY SET FORTH IN THIS WARRANTY, BC NEXUS IS PROVIDED "AS IS." FX-ITS MAKES NO OTHER WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, OR NON-INFRINGEMENT. THIS LIMITED WARRANTY GIVES YOU SPECIFIC LEGAL RIGHTS, AND YOU MAY ALSO HAVE OTHER RIGHTS WHICH VARY BY JURISDICTION.
+This Limited Warranty is a voluntary commitment by fx-its. It is in addition to the statutory warranty rights (Sections 434 ff. of the German Civil Code, BGB) under the [EULA]({{ site.baseurl }}/legal/eula/), which remain unaffected. Liability is governed by Section 6 of the EULA. Nothing in this warranty limits liability for intent, gross negligence, injury to life, body or health, or under the German Product Liability Act (ProdHaftG).
 
 ---
 
