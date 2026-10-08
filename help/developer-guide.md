@@ -1168,6 +1168,30 @@ Resolves the `Json Path` of a field mapping against an incoming payload. No data
 
 **Event:** `OnResolveJsonPath(JsonPath: Text; var SourceJson: JsonObject; var ResultToken: JsonToken; var Found: Boolean; var IsHandled: Boolean)` — the extensibility point for a syntax this codeunit deliberately does not support (wildcards, filters, functions). It fires once per `Resolve` call, before the built-in parser is consulted; set `IsHandled` to take resolution over entirely and `Found` becomes what `Resolve` returns. `ValidateExpression` fires it too, with an empty `SourceJson`, so a subscriber's own syntax is not rejected as invalid before it can ever be used.
 
+### Codeunit 73710484 "FXNI Nexus Record Key Mgt."
+
+Formats a record's primary key as a pipe-delimited string. Generic on purpose: it works through `RecordRef`/`KeyRef`, so any table whose primary key fields format cleanly via `Format(<value>, 0, 9)` works without per-table AL code. The codeunit declares no `Access` property and is therefore public.
+
+| Procedure | Signature | Description |
+|---|---|---|
+| GetPrimaryKeyAsText | `procedure GetPrimaryKeyAsText(var RecRef: RecordRef): Text[250]` | Returns the primary key of the record as a pipe-delimited string, the form the attachment FactBoxes use as record key. |
+
+### Codeunit 73710498 "FXNI Config API"
+
+The configuration surface for callers without a user interface, such as a Copilot agent session. It never shows a dialog and never raises: every procedure returns `false` on failure, and the reason is read with `GetLastErrorText()`. All procedures are idempotent, so a retry leaves the database in the same state as the first call.
+
+| Procedure | Signature | Description |
+|---|---|---|
+| CreateInterfaceDefinition | `procedure CreateInterfaceDefinition(InterfaceCode: Code[20]; TableNo: Integer; InterfaceType: Enum "FXNI Interface Type"; MappingType: Enum "FXNI Field Mapping Type"): Boolean` | Creates an interface definition or brings an existing one to the requested shape. The target table must exist and must not be one of BC Nexus' own tables. Writes nothing when all four values already match. |
+| CreateEndpoint | `procedure CreateEndpoint(EndpointCode: Code[20]; Url: Text; AuthType: Enum "FXNC Authentication Type"): Boolean` | Creates an endpoint or updates an existing one. The URL must be https://; a URL that does not fit the field is refused, not truncated. Changing the authentication type of an existing endpoint deletes its stored client secret and access token. |
+| SetEndpointCredentials | `procedure SetEndpointCredentials(EndpointCode: Code[20]; ClientId: SecretText; ClientSecret: SecretText): Boolean` | Stores the client secret of an existing endpoint. A non-empty `ClientId` is refused with a reason that names `SetEndpointClientId`, because the client ID is an ordinary text field and AL offers no way from `SecretText` to `Text` besides `Unwrap()`. |
+| SetEndpointClientId | `procedure SetEndpointClientId(EndpointCode: Code[20]; ClientId: Text): Boolean` | Stores the OAuth 2.0 client ID of an existing endpoint. An unchanged value writes nothing. |
+| TestConnection | `procedure TestConnection(EndpointCode: Code[20]; var ErrorText: Text): Boolean` | Sends a real request to the endpoint and returns `true` on a success status. `ErrorText` is blank on success, otherwise the reason. The only procedure here with an effect outside the database. |
+| GetMappableFields | `procedure GetMappableFields(TableNo: Integer; InterfaceType: Enum "FXNI Interface Type") FieldArray: JsonArray` | Lists the fields of the table that may be mapped for the interface type, including `mandatory` for primary key membership. FlowFields are left out on Receive, included on Send and Publish. |
+| ApplyFieldMapping | `procedure ApplyFieldMapping(InterfaceCode: Code[20]; MappingJson: JsonArray; var RejectedLines: JsonArray): Boolean` | Writes a field mapping. Every line is judged before anything is written; refused lines come back in `RejectedLines` with a reason. "Static Field Value" is never written by this API. |
+| ValidateInterface | `procedure ValidateInterface(InterfaceCode: Code[20]; var Findings: JsonArray): Boolean` | Checks a configured interface and collects all findings, each with a locale-neutral `code` and a translated `message`. Returns `true` on warnings, `false` on errors. |
+| GetLastErrorText | `procedure GetLastErrorText(): Text` | The reason the last call returned `false`; blank after a call that succeeded. It shadows the platform function of the same name inside this codeunit. |
+
 ### FXI Core APIs used by BC Nexus
 
 The objects below belong to the FXI Core library app, not to BC Nexus. They are listed because BC Nexus depends on them; their contract is owned by FXI Core.
