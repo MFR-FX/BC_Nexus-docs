@@ -107,7 +107,7 @@ its own. Client secret and access token sit in the IsolatedStorage of FXI Core.
 | Token Request Headers | Blob | Additional headers for token requests. Written via `SetTokenRequestHeaders()`. |
 | Endpoint Request Headers | Blob | Additional headers added to every endpoint request. Written via `SetEndpointRequestHeaders()`. |
 | Client Secret | IsolatedStorage | Set via `SetClientSecret()`. Never stored in a table field. |
-| Access Token | IsolatedStorage | Managed automatically. Retrieved via `GetAccessToken()`. |
+| Access Token | IsolatedStorage | Managed automatically. Read only inside FXI Core (`GetAccessToken()` is internal since 1.0.0.0); from outside, `HasAccessToken()` reports whether one is stored. |
 
 ### Table 73710479 "FXNI Nexus Field Map Def."
 
@@ -1194,7 +1194,7 @@ The configuration surface for callers without a user interface, such as a Copilo
 
 ### FXI Core APIs used by BC Nexus
 
-The objects below belong to the FXI Core library app, not to BC Nexus. They are listed because BC Nexus depends on them; their contract is owned by FXI Core.
+The objects below belong to the FXI Core library app, not to BC Nexus. They are listed because BC Nexus depends on them; their contract is owned by FXI Core. Since FXI Core 1.0.0.0 (DEV-75) that contract is fixed in the FXI Core repository, `docs/public-surface.md`, and guarded by an AppSourceCop baseline; BC Nexus requires FXI Core 1.0.0.0 or later.
 
 ### Codeunit 73710537 "FXNC HTTP Handler" (FXI Core)
 
@@ -1203,10 +1203,10 @@ Part of FXI Core since 27.7.0.0; listed because BC Nexus calls it for every outb
 | Procedure | Signature | Description |
 |---|---|---|
 | Send | `procedure Send(var Endpoint: Record "FXNC Endpoint Definition"; Method: Text; Body: Text; SourceCode: Code[20]; Reference: Text[100]; var ResponseText: Text; var StatusCode: Integer): Boolean` | Implements `interface "FXNC ITransport"`. Sends an HTTP request to the endpoint, handles authentication header injection and writes one row to the FXI Core activity log with `SourceCode` and `Reference` (BC Nexus passes `NEXUS` and the transaction entry number). The row is written in the caller's transaction: `ProcessSend` raises an error after a failed send, which rolls the row back, so the log shows successful NEXUS sends only. Returns `true` if the response is a 2xx status. |
-| AcquireOAuthToken | `procedure AcquireOAuthToken(var Endpoint: Record "FXNC Endpoint Definition"): SecretText` | Acquires or returns a cached OAuth token. Handles token expiry. Stores the token in IsolatedStorage via the endpoint table methods. Returns `SecretText`, not `Text`, so the token never materializes as a plain string — a caller that declares a `Text` variable for the result does not compile. |
-| BuildBasicAuthHeader | `procedure BuildBasicAuthHeader(var Endpoint: Record "FXNC Endpoint Definition"): SecretText` | Returns a base64-encoded `Basic <credentials>` header value for the endpoint. Returns `SecretText`, not `Text`, so the credentials never materialize as a plain string. |
 | TestConnection | `procedure TestConnection(var Endpoint: Record "FXNC Endpoint Definition"): Boolean` | Calls `Send()` with GET and source code `CORE-TEST` and returns true if the response is 2xx. Used by the Setup page to verify connectivity. |
 | CheckNoPlainTextClientSecret | `procedure CheckNoPlainTextClientSecret(var Endpoint: Record "FXNC Endpoint Definition"; BodyTemplate: Text)` | Raises an error if the token request body assigns `client_secret` anything other than the `{{ "{{" }}client_secret}}` placeholder, in form-encoded or JSON spelling. Checks every occurrence; the error never echoes the body or the matched value. Called by the endpoint subpage when the token request body is saved and again before the token request is sent. |
+
+**Internal since FXI Core 1.0.0.0:** `AcquireOAuthToken` and `BuildBasicAuthHeader`. They return the token and the Basic credentials as `SecretText`; Isolated Storage is separated per extension, so another app can no longer read a stored credential directly. The barrier is not yet complete in 1.0.0.0: `OnBeforeSendRequest` fires after the Authorization header is set and `OnBeforeAcquireToken` passes the endpoint by `var`, so a subscriber can redirect a request together with its credential. Closing that is planned for FXI Core 1.0.1 (DEV-405). A subscriber can still supply its own token through `OnBeforeAcquireToken`.
 
 **Local procedures:** `BuildClientCredentialsRequest`, `BuildTokenRequestBody`, `SubstituteClientId`, `SkipAssignmentSeparators`, `IsAssignmentSeparator`, `ApplyTimeout`, `ParseAndAddHeaders`, `CheckNoSystemHeaderConfigured`, `GetSystemManagedHeaders`, `OnBeforeSendRequest`, `OnAfterSendRequest`, `OnBeforeAcquireToken`.
 
