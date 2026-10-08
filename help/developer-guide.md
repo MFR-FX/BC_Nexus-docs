@@ -166,6 +166,8 @@ One row per attachment received through an attachment-mode interface.
 | File Extension | Text[20] | e.g. `.pdf`, `.xlsx`. |
 | File Size (Bytes) | Integer | Approximate decoded size. |
 | External Reference | Text[500] | URL or storage key when Storage Location is External. |
+| Created At | DateTime | Set on insert. Not editable. |
+| Created By | Code[50] | User ID of the person or process that created the attachment, set on insert. Not editable. |
 | Interface Definition Code | Code[20] | Which interface created this attachment. |
 | Transaction Entry No. | Integer | The transaction that created this attachment. |
 
