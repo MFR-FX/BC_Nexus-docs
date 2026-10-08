@@ -311,6 +311,15 @@ Zwei Eigenschaften des CSV-Pfads, die im Test auffallen:
 
 ## 8. Publish
 
+> **Die Fixtures dieses Abschnitts legt die Test-App an.** Codeunit 50119 „FXNI Smoke Fixtures"
+> (DEV-398) stellt `DEMO`, `CURRENCYIMPORT`, `CURRENCYPUBLISH`, `CURRENCYSEND`, `TIMEOUT` und
+> `CURRENCYTIMEOUT` samt Feldzuordnung sowie die automatische Verarbeitung mit ihrem
+> Aufgabenwarteschlangenposten her. Sie läuft in einer **eigenen Suite mit Test Runner 130451
+> „Isol. Disabled"** — unter dem üblichen Runner 130450 rollt die Plattform alles zurück, was eine
+> Codeunit geschrieben hat, auch AutoCommit. Außerdem muss für FXI Core in den
+> Erweiterungseinstellungen „HttpClient-Anfragen zulassen" an sein, sonst endet Send mit „status 0".
+> Die Tabellen unten bleiben die Referenz.
+
 `Publish` braucht eine eigene Schnittstelle vom Typ `Publish`; die Beispieldaten liefern keine.
 Die Verarbeitung verlangt außerdem einen hinterlegten **Endpunktcode**, obwohl sie den Endpunkt
 für Publish nie aufruft — der mitgelieferte Endpunkt `DEMO` genügt dafür.
@@ -451,8 +460,8 @@ stillschweigend zu ignorieren. Das gilt für `SendWithOptions` genauso wie für 
 
 ### Timeout-Fixture
 
-Für den Timeout-Schritt des Smoke-Skripts (Abschnitt 10) braucht es eine eigene, per Hand
-angelegte Schnittstelle — die Beispieldaten enthalten sie nicht:
+Für den Timeout-Schritt des Smoke-Skripts (Abschnitt 10) braucht es eine eigene Schnittstelle —
+die Beispieldaten enthalten sie nicht:
 
 | Objekt | Feld | Wert |
 |---|---|---|
