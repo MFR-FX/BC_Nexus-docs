@@ -1196,7 +1196,7 @@ The three endpoint writes (`CreateEndpoint`, `SetEndpointCredentials`, `SetEndpo
 
 ### FXI Core APIs used by BC Nexus
 
-The objects below belong to the FXI Core library app, not to BC Nexus. They are listed because BC Nexus depends on them; their contract is owned by FXI Core. Since FXI Core 1.0.0.0 (DEV-75) that contract is fixed in the FXI Core repository, `docs/public-surface.md`, and guarded by an AppSourceCop baseline; BC Nexus requires FXI Core 1.0.0.0 or later.
+The objects below belong to the FXI Core library app, not to BC Nexus. They are listed because BC Nexus depends on them; their contract is owned by FXI Core. Since FXI Core 1.0.0.0 (DEV-75) that contract is fixed in the FXI Core repository, `docs/public-surface.md`, and guarded by an AppSourceCop baseline; BC Nexus requires FXI Core 1.0.0.1 or later (1.0.0.1 fixes the OAuth token request and sends JSON payloads as application/json, DEV-410).
 
 ### Codeunit 73710537 "FXNC HTTP Handler" (FXI Core)
 
