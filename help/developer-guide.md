@@ -91,6 +91,15 @@ One row per external HTTP endpoint. Since 27.7.0.0 the table belongs to the libr
 which BC Nexus depends on (namespace `FxIts.Core.Transport`); BC Nexus ships no endpoint table of
 its own. Client secret and access token sit in the IsolatedStorage of FXI Core.
 
+**The table is internal since FXI Core 1.0.0.3.** A partner extension cannot declare
+`Record "FXNC Endpoint Definition"`, so the table type is not available in its code. That is not an
+access barrier: through a `RecordRef` on the table number an extension can still open the table, within
+the permissions of the user. A target changed that way is blocked by the target fingerprint (section 7,
+"Target fingerprint"): nothing is sent with the stored credential until an administrator confirms the
+target. The table is described because the Setup page shows it and the Send flow depends
+on it. Create and maintain endpoints on the Setup page, or from code through the procedures of
+codeunit 73710498 "FXNI Config API" (section 7), which take the endpoint code as a plain value.
+
 | Field | Type | Purpose |
 |---|---|---|
 | Code | Code[20] | PK. |
@@ -107,7 +116,7 @@ its own. Client secret and access token sit in the IsolatedStorage of FXI Core.
 | Token Request Headers | Blob | Additional headers for token requests. Written via `SetTokenRequestHeaders()`. |
 | Endpoint Request Headers | Blob | Additional headers added to every endpoint request. Written via `SetEndpointRequestHeaders()`. |
 | Client Secret | IsolatedStorage | Set via `SetClientSecret()`. Never stored in a table field. |
-| Access Token | IsolatedStorage | Managed automatically. Read only inside FXI Core (`GetAccessToken()` is internal since 1.0.0.0); from outside, `HasAccessToken()` reports whether one is stored. |
+| Access Token | IsolatedStorage | Managed automatically. Read only by the HTTP Handler of FXI Core; since 1.0.0.3 the reader is a local procedure of that codeunit. |
 
 ### Table 73710479 "FXNI Nexus Field Map Def."
 
@@ -279,9 +288,9 @@ Both outgoing paths read the options object out of the **transaction's own reque
 
 All integration events use `[IntegrationEvent(false, false)]`. Neither parameter is `true`, meaning there is no global publisher and no inheritance. Subscribe with a standard `[EventSubscriber]` attribute.
 
-BC Nexus exposes events across five codeunits of its own. The transport events in 4.3 are published
-by FXI Core, the library app BC Nexus depends on; they are listed here because every outbound call
-of BC Nexus passes through them. They are grouped below by codeunit.
+BC Nexus exposes events across five codeunits of its own, grouped below by codeunit. The transport
+events of FXI Core, the library app BC Nexus depends on, are reserved for fx-its apps since
+FXI Core 1.0.0.3; 4.3 says what to use instead.
 
 ### Namespaces and `using` directives
 
@@ -292,7 +301,7 @@ BC Nexus objects are organized into namespaces under `FxIts.BCNexus`. A subscrib
 | `FxIts.BCNexus` | FXNI Nexus Install, FXNI Nexus Upgrade, FXNI Nexus Record Key Mgt., all three permission sets |
 | `FxIts.BCNexus.Setup` | Table and page "FXNI Nexus Setup", FXNI Nexus Setup Management |
 | `FxIts.BCNexus.Interfaces` | "FXNI Nexus Interface Def.", "FXNI Nexus Field Map Def.", "FXNI Nexus Interface Filter", the enums "FXNI Interface Type", "FXNI Field Mapping Type" and "FXNI Filter Operator", the interface, field mapping and filter pages |
-| `FxIts.Core.Transport` (FXI Core, separate app) | "FXNC Endpoint Definition", the enums "FXNC Authentication Type", "FXNC OAuth Auth Type" and "FXNC Transport Type", `interface "FXNC ITransport"`, "FXNC HTTP Handler" — since 27.7.0.0 BC Nexus depends on FXI Core instead of shipping these itself |
+| `FxIts.Core.Transport` (FXI Core, separate app) | "FXNC Endpoint Definition", the enums "FXNC Authentication Type", "FXNC OAuth Auth Type" and "FXNC Transport Type", `interface "FXNC ITransport"`, "FXNC HTTP Handler" — since 27.7.0.0 BC Nexus depends on FXI Core instead of shipping these itself. Not for partner extensions: since FXI Core 1.0.0.3 the objects listed here, except the enum "FXNC Authentication Type", are internal and reserved for fx-its apps |
 | `FxIts.BCNexus.Transactions` | "FXNI Nexus Transaction List", the enum "FXNI Transaction Status", "FXNI Nexus Webservice", "FXNI Txn. Proc. Job", "FXNI Txn. Processing", "FXNI Nexus Query Options", "FXNI Nexus Json Path" |
 | `FxIts.BCNexus.Attachments` | "FXNI Nexus Attachment", the enum "FXNI Attach. Store", "FXNI Attach. Processing", the ten page extensions |
 | `FxIts.BCNexus.Test` | The test codeunit and the HTTP mock |
@@ -586,94 +595,11 @@ end;
 
 ---
 
-### 4.3 Codeunit 73710537 "FXNC HTTP Handler" (FXI Core)
+### 4.3 Transport events (FXI Core)
 
-These events sit on the outbound HTTP path. `Send()` is reached from the Send flow
-(`ProcessSend()` in "FXNI Txn. Processing" calls `Send()` through `interface "FXNC ITransport"`, resolved
-from the endpoint's **Transport Type**, with source code `NEXUS` and the transaction entry number as reference) and from every connection test — the **Test Connection**
-action on the endpoint subpage and on the interface subpage as well as `TestConnection()` on codeunit 73710498 "FXNI Config API". A subscriber here
-sees all of them; `OnBeforeSendRequest` only gets the request, so narrow on the request URI when you
-mean just one endpoint.
+The HTTP transport that carries every outbound call of BC Nexus belongs to FXI Core. Since FXI Core 1.0.0.3 its events (`OnBeforeSendRequest`, `OnAfterSendRequest`, `OnBeforeAcquireToken`) are reserved for fx-its apps: the codeunit that publishes them is internal, so a subscriber in a partner extension does not compile, and they are not documented here.
 
-#### `OnBeforeSendRequest`
-
-| Attribute | Value |
-|---|---|
-| Fires in | `Send()`, after the request URI, body, authentication header and the configured endpoint headers are all set on `HttpRequest`, and immediately before the timeout is applied and `HttpClient.Send()` is called. For an OAuth 2.0 endpoint the token has already been acquired at this point. |
-| Effect of `IsHandled := true` | No request is sent. `Send()` sets `StatusCode := 200`, returns `true`, and leaves the caller's `ResponseText` **untouched** — if your subscriber replaces the call, it has to deliver the response payload some other way, because it cannot write into `ResponseText` from here. |
-
-| Parameter | Direction | Type | Description |
-|---|---|---|---|
-| HttpRequest | var | HttpRequestMessage | The fully prepared request. Add or replace headers, rewrite the URI, or swap the content before it goes out. |
-| IsHandled | var | Boolean | Set to `true` to suppress the actual send. |
-
-**Typical use cases:**
-- Add a correlation or tracing header that BC Nexus does not know about.
-- Log the outgoing request (never the `Authorization` header) for troubleshooting.
-- Short-circuit the send in a test or staging company so no traffic leaves the tenant.
-
-**Subscriber stub:**
-```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNC HTTP Handler", 'OnBeforeSendRequest', '', false, false)]
-local procedure OnBeforeSendRequest(var HttpRequest: HttpRequestMessage; var IsHandled: Boolean)
-begin
-    // Your logic here.
-end;
-```
-
----
-
-#### `OnAfterSendRequest`
-
-| Attribute | Value |
-|---|---|
-| Fires in | `Send()`, after `HttpClient.Send()` has returned successfully and **before** the status code and the response body are read out into the caller's `StatusCode` and `ResponseText`. A transport failure — `HttpClient.Send()` returning `false` — exits earlier and does **not** raise this event. |
-
-| Parameter | Direction | Type | Description |
-|---|---|---|---|
-| HttpResponse | var | HttpResponseMessage | The raw response. It is read only after this event, so a subscriber that rewrites the content changes what the caller receives. |
-
-**Typical use cases:**
-- Emit telemetry with the response status and duration.
-- Inspect response headers (rate limit, pagination cursor) that the caller never gets to see.
-- Unwrap a middleware envelope so the transaction sees the payload it expects.
-
-**Subscriber stub:**
-```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNC HTTP Handler", 'OnAfterSendRequest', '', false, false)]
-local procedure OnAfterSendRequest(var HttpResponse: HttpResponseMessage)
-begin
-    // Your logic here.
-end;
-```
-
----
-
-#### `OnBeforeAcquireToken`
-
-| Attribute | Value |
-|---|---|
-| Fires in | `AcquireOAuthToken()`, as its first statement — before the cached token is checked, before an expired token is cleared and before the grant-type dispatch. |
-| Effect of `IsHandled := true` | `AcquireOAuthToken()` returns `Token` unchanged. BC Nexus neither reads nor writes its own token cache and does not touch `"Token Expires At"`, so a subscriber that takes over here owns caching and expiry as well. |
-
-| Parameter | Direction | Type | Description |
-|---|---|---|---|
-| Endpoint | var | Record "FXNC Endpoint Definition" | The endpoint the token is needed for. |
-| Token | var | SecretText | The token your subscriber supplies. `SecretText`, not `Text`, on purpose: the value must never exist as a plain string on the way back, which is the same guarantee `BuildBasicAuthHeader` keeps for Basic auth. |
-| IsHandled | var | Boolean | Set to `true` to use your token instead of the built-in OAuth flow. |
-
-**Typical use cases:**
-- Fetch the token from a managed identity or a company-wide token service instead of the endpoint's own client credentials.
-- Support a grant type the built-in `"FXNC OAuth Auth Type"` enum does not cover.
-
-**Subscriber stub:**
-```al
-[EventSubscriber(ObjectType::Codeunit, Codeunit::"FXNC HTTP Handler", 'OnBeforeAcquireToken', '', false, false)]
-local procedure OnBeforeAcquireToken(var Endpoint: Record "FXNC Endpoint Definition"; var Token: SecretText; var IsHandled: Boolean)
-begin
-    // Your logic here.
-end;
-```
+To keep a test or staging company from sending anything, subscribe to `OnBeforeProcessTransaction` in Codeunit 73710477 "FXNI Txn. Processing" (4.2) and set `IsHandled := true` for the transactions in question. `ProcessTransaction()` then returns before the Send flow starts, so no request leaves Business Central; example 5.4 shows the pattern. The **Test Connection** actions and `TestConnection()` on codeunit 73710498 "FXNI Config API" do not pass through `ProcessTransaction()` and always send a real request.
 
 ---
 
@@ -1091,10 +1017,10 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 
 | Procedure | Signature | Description |
 |---|---|---|
-| ProcessTransaction | `procedure ProcessTransaction(var TransactionRec: Record "FXNI Nexus Transaction List"): Boolean` | Processes a single transaction record. Called by the job queue (Codeunit 73710476) and by `Send()` / `Publish()`. Safe to call directly in tests or from custom job logic. |
+| ProcessTransaction | `procedure ProcessTransaction(var TransactionRec: Record "FXNI Nexus Transaction List"): Boolean` | Processes a single transaction record. Called by the job queue (Codeunit 73710476) and by `Send()` / `Publish()`. Safe to call directly in tests or from custom job logic. Since 27.8.10.0 it first requires Insert permission on the transaction list, like every other route into processing (section 8); a caller without it is refused before anything else happens, `OnBeforeProcessTransaction` included. |
 | ValidateSetup | `procedure ValidateSetup(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Validates that the interface definition is complete and not blocked. Raises an error on any misconfiguration. |
 | ProcessReceive | `procedure ProcessReceive(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Executes the Receive flow: parses the request, performs PK lookup, and inserts or modifies the target record. |
-| ProcessSend | `procedure ProcessSend(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Executes the Send flow: builds the payload and HTTP-POSTs it to the endpoint. |
+| ProcessSend | `procedure ProcessSend(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Executes the Send flow: builds the payload and HTTP-POSTs it to the endpoint. Since 27.8.10.0 it applies the same permission check as `ProcessTransaction` and refuses an interface definition that is not saved, or that differs from the saved one in type, table, endpoint code, entry-based setting or maximum page size. It also refuses a saved interface that is Blocked, because `ValidateSetup` does not run on this path. Sending always uses the saved definition: read it with `Get()` and pass it on unchanged. |
 | ProcessPublish | `procedure ProcessPublish(var InterfaceDef: Record "FXNI Nexus Interface Def."; var TransactionRec: Record "FXNI Nexus Transaction List")` | Executes the Publish flow: builds the payload and stores it in the transaction response. |
 | ParseJsonToFieldRef | `procedure ParseJsonToFieldRef(JsonKey: Text; JsonData: JsonObject; var FRef: FieldRef; DataType: Text): Boolean` | Utility: resolves a JSON key (case-insensitive) and assigns its value to the provided FieldRef. Returns `true` when a value was assigned, `false` when the key is absent, null or empty — the FieldRef then keeps whatever it held before. `DataType` is unused; the type comes from the FieldRef. Useful in subscriber code that manually parses the request payload. |
 | BuildJsonFromRecord | `procedure BuildJsonFromRecord(var RecRef: RecordRef; InterfaceCode: Code[20]): Text` | Utility: serializes a record to a JSON object string using the field mappings **of the given interface**, which it resolves itself. Useful in `OnBeforeBuildSendPayload` subscribers that want to build on top of the standard serialization. The interface code is a mandatory parameter rather than a pre-filtered record: the earlier signature took `var FieldMappings: Record` and discarded the caller's filter internally, so a payload could pick up another interface's JSON keys. |
@@ -1185,7 +1111,7 @@ The three endpoint writes (`CreateEndpoint`, `SetEndpointCredentials`, `SetEndpo
 | Procedure | Signature | Description |
 |---|---|---|
 | CreateInterfaceDefinition | `procedure CreateInterfaceDefinition(InterfaceCode: Code[20]; TableNo: Integer; InterfaceType: Enum "FXNI Interface Type"; MappingType: Enum "FXNI Field Mapping Type"): Boolean` | Creates an interface definition or brings an existing one to the requested shape. The target table must exist and must not be one of BC Nexus' own tables. Writes nothing when all four values already match. |
-| CreateEndpoint | `procedure CreateEndpoint(EndpointCode: Code[20]; Url: Text; AuthType: Enum "FXNC Authentication Type"): Boolean` | Creates an endpoint or updates an existing one. The URL must be https://; a URL that does not fit the field is refused, not truncated. Changing the authentication type of an existing endpoint deletes its stored client secret and access token. Requires the endpoint configuration permission. |
+| CreateEndpoint | `procedure CreateEndpoint(EndpointCode: Code[20]; Url: Text; AuthType: Enum "FXNC Authentication Type"): Boolean` | Creates an endpoint or updates an existing one. The URL must be https://; a URL that does not fit the field is refused, not truncated. Changing the authentication type of an existing endpoint deletes its stored client secret and access token. Requires the endpoint configuration permission. Since FXI Core 1.0.0.3 the endpoint table is internal, so this procedure is the way for a partner extension to create an endpoint; the enum "FXNC Authentication Type" is the one FXI Core object that stays public for it. |
 | SetEndpointCredentials | `procedure SetEndpointCredentials(EndpointCode: Code[20]; ClientId: SecretText; ClientSecret: SecretText): Boolean` | Stores the client secret of an existing endpoint. A non-empty `ClientId` is refused with a reason that names `SetEndpointClientId`, because the client ID is an ordinary text field and AL offers no way from `SecretText` to `Text` besides `Unwrap()`. Requires the endpoint configuration permission. |
 | SetEndpointClientId | `procedure SetEndpointClientId(EndpointCode: Code[20]; ClientId: Text): Boolean` | Stores the OAuth 2.0 client ID of an existing endpoint. An unchanged value writes nothing. Requires the endpoint configuration permission. |
 | TestConnection | `procedure TestConnection(EndpointCode: Code[20]; var ErrorText: Text): Boolean` | Sends a real request to the endpoint and returns `true` on a success status. `ErrorText` is blank on success, otherwise the reason. The only procedure here with an effect outside the database. |
@@ -1196,7 +1122,7 @@ The three endpoint writes (`CreateEndpoint`, `SetEndpointCredentials`, `SetEndpo
 
 ### FXI Core APIs used by BC Nexus
 
-The objects below belong to the FXI Core library app, not to BC Nexus. They are listed because BC Nexus depends on them; their contract is owned by FXI Core. Since FXI Core 1.0.0.0 (DEV-75) that contract is fixed in the FXI Core repository, `docs/public-surface.md`, and guarded by an AppSourceCop baseline; BC Nexus requires FXI Core 1.0.0.2 or later (1.0.0.1 fixes the OAuth token request and sends JSON payloads as application/json, DEV-410; 1.0.0.2 sets the Authorization header only after OnBeforeSendRequest, guards credential procedures and the token URL, and fixes Base64 into Blob fields, DEV-405, DEV-408, DEV-409, DEV-412).
+The objects below belong to the FXI Core library app, not to BC Nexus. They are listed because BC Nexus depends on them; their contract is owned by FXI Core. **Since FXI Core 1.0.0.3 these codeunits are internal**: only fx-its apps that FXI Core names as friends can compile against them, and a partner extension can neither call nor subscribe to them. The list is background for what BC Nexus relies on, not an API to build on. Besides the pages, which cannot be restricted and are not extensible, only the enum "FXNC Authentication Type" (it appears in the signature of `CreateEndpoint`) and the three permission sets are still public. BC Nexus requires FXI Core 1.0.0.3 or later (1.0.0.1 fixes the OAuth token request and sends JSON payloads as application/json, DEV-410; 1.0.0.2 sets the Authorization header only after OnBeforeSendRequest, guards credential procedures and the token URL, and fixes Base64 into Blob fields, DEV-405, DEV-408, DEV-409, DEV-412; 1.0.0.3 makes the FXI Core code internal, ties a stored credential to its target and deletes it whenever the authentication type changes, DEV-413, DEV-424).
 
 ### Codeunit 73710537 "FXNC HTTP Handler" (FXI Core)
 
@@ -1208,7 +1134,17 @@ Part of FXI Core since 27.7.0.0; listed because BC Nexus calls it for every outb
 | TestConnection | `procedure TestConnection(var Endpoint: Record "FXNC Endpoint Definition"): Boolean` | Calls `Send()` with GET and source code `CORE-TEST` and returns true if the response is 2xx. Used by the Setup page to verify connectivity. |
 | CheckNoPlainTextClientSecret | `procedure CheckNoPlainTextClientSecret(var Endpoint: Record "FXNC Endpoint Definition"; BodyTemplate: Text)` | Raises an error if the token request body assigns `client_secret` anything other than the `{{ "{{" }}client_secret}}` placeholder, in form-encoded or JSON spelling. Checks every occurrence; the error never echoes the body or the matched value. Called by the endpoint subpage when the token request body is saved and again before the token request is sent. |
 
-**Internal since FXI Core 1.0.0.0:** `AcquireOAuthToken` and `BuildBasicAuthHeader`. They return the token and the Basic credentials as `SecretText`; Isolated Storage is separated per extension, so another app can no longer read a stored credential directly. The barrier is not yet complete in 1.0.0.0: `OnBeforeSendRequest` fires after the Authorization header is set and `OnBeforeAcquireToken` passes the endpoint by `var`, so a subscriber can redirect a request together with its credential. Closing that is planned for FXI Core 1.0.1 (DEV-405). A subscriber can still supply its own token through `OnBeforeAcquireToken`.
+**Credential readers.** `AcquireOAuthToken` and `BuildBasicAuthHeader` return the token and the Basic credentials as `SecretText`. Since FXI Core 1.0.0.3 they are local procedures of the HTTP Handler, and the endpoint table no longer has a procedure that hands out a stored client secret or access token: the HTTP Handler reads them itself. Isolated Storage is separated per extension, so another app cannot read a stored credential directly. The transport events, which let a subscriber see and change a request, are reserved for fx-its apps (4.3).
+
+**Target fingerprint (DEV-413).** FXI Core keeps a SHA-256 fingerprint of the settings that decide where a stored credential is sent next to the credential (the seal): Endpoint URL, Token URL, Authentication Type, OAuth Auth Type, Client ID and, for OAuth 2.0 only, the Token Request Body. The HTTP Handler compares it with the endpoint as it is now before it puts a credential on a request. On a mismatch, or when the seal is missing, the send is blocked and nothing leaves Business Central. The Send flow, the **Test Connection** actions and `TestConnection()` on codeunit 73710498 "FXNI Config API" are all subject to the block.
+
+The seal is set when the client secret is entered (whoever enters it vouches for the target as it then stands), by the **Confirm Target** action, and by the upgrade to FXI Core 1.0.0.3 for endpoints an earlier version stored; a fresh install seals nothing. Storing an access token does not seal.
+
+What is blocked is a target that was changed without field validation: a field assigned and saved with `Modify(false)`, written through a `RecordRef`, or imported by a configuration package that does not validate fields. A validated change (as on the Endpoint Definitions page, or through `CreateEndpoint` and `SetEndpointClientId`) moves the seal along only when it covered the endpoint as it was before the change; the same holds for the token request body. So a validated administrator change starting from a confirmed target counts as confirmed. A target that was moved past the seal stays blocked until an administrator runs **Confirm Target**; a later validated change of another field does not release it. If the moved field is set back to the sealed value with a validated change, the endpoint is free again at once.
+
+An administrator checks the endpoint and chooses **Confirm Target** on the endpoint subpage. The action needs Insert permission on the endpoint table (permission set "FXI Core Admin"), shows Endpoint URL, Token URL, Authentication Type, Client ID and the token request body of the saved endpoint, and refuses when the saved row, body included, changed since it was displayed. The same threshold applies, once a client secret or access token is stored, to changing Endpoint URL, Token URL, Authentication Type, OAuth Auth Type, Client ID and the token request body. Deleting the endpoint or clearing its stored credentials removes secret, token and seal.
+
+**Changing the authentication type (DEV-424).** Every actual change of the Authentication Type deletes the stored client secret and access token; validating the same value does nothing. Afterwards the secret has to be entered again (`SetEndpointCredentials` or the **Set Client Secret** action). If the type was changed past the seal, **Confirm Target** refuses to confirm it, and the endpoint is released only by setting the client secret again.
 
 **Local procedures:** `BuildClientCredentialsRequest`, `BuildTokenRequestBody`, `SubstituteClientId`, `SkipAssignmentSeparators`, `IsAssignmentSeparator`, `ApplyTimeout`, `ParseAndAddHeaders`, `CheckNoSystemHeaderConfigured`, `GetSystemManagedHeaders`, `OnBeforeSendRequest`, `OnAfterSendRequest`, `OnBeforeAcquireToken`.
 
@@ -1220,7 +1156,7 @@ Part of FXI Core since 27.7.0.0; listed because BC Nexus calls it for every outb
 
 BC Nexus ships with three assignable permission sets. The split follows one rule: whoever may run a transaction can use the stored endpoint credentials to call any Send interface, or read a whole target table out through Publish, whether or not they can ever see a credential. Credentials live in Isolated Storage, which no permission set governs. Codeunit execute rights are no lever either: the standard base sets every licensed user holds grant Execute on all codeunits and pages (Codeunit 0, Page 0), so leaving a codeunit out of a set does not stop its holder from running it — the sandbox acceptance of 07.10.2026 proved that for "Process Manually".
 
-The lever is table data, which the base sets do not wildcard. Since 27.8.0.0 every route into processing — "Process Manually" on the transaction list and card, `Receive`/`Send`/`Publish` on `FXNI Nexus Webservice`, the processing job `FXNI Txn. Proc. Job` and, since 27.8.1.0, the **Connection Test** action on the interface subpage and `TestConnection()` on `FXNI Config API` (which returns false with the permission message instead of raising) — first checks Insert permission on `FXNI Nexus Transaction List` and refuses the caller without it, before anything is written. `FXNI Nexus Admin` and `FXNI Nexus Integr.` hold that Insert, `FXNI Nexus User` does not. Granting Insert on the transaction list to any other set grants processing — and four standard sets already do it for every table: SUPER, SUPER (DATA), D365 APIV1 and D365 APIV2 grant Insert on table data 0 (checked against the sandbox's expanded permission sets on 07.10.2026). A business user who holds one of them passes the gate, so keep them away from people who should only monitor. The job queue entry for the processing job therefore has to belong to an account with the admin or integration set.
+The lever is table data, which the base sets do not wildcard. Since 27.8.0.0 every route into processing — "Process Manually" on the transaction list and card, `Receive`/`Send`/`Publish` on `FXNI Nexus Webservice`, the processing job `FXNI Txn. Proc. Job` and, since 27.8.1.0, the **Connection Test** action on the interface subpage and `TestConnection()` on `FXNI Config API` (which returns false with the permission message instead of raising) — first checks Insert permission on `FXNI Nexus Transaction List` and refuses the caller without it, before anything is written. `FXNI Nexus Admin` and `FXNI Nexus Integr.` hold that Insert, `FXNI Nexus User` does not. Granting Insert on the transaction list to any other set grants processing — and four standard sets already do it for every table: SUPER, SUPER (DATA), D365 APIV1 and D365 APIV2 grant Insert on table data 0 (checked against the sandbox's expanded permission sets on 07.10.2026). A business user who holds one of them passes the gate, so keep them away from people who should only monitor. The job queue entry for the processing job therefore has to belong to an account with the admin or integration set. Since 27.8.10.0 `ProcessTransaction` and `ProcessSend` in `FXNI Txn. Processing` take the same check themselves, so code that runs that codeunit or calls those procedures directly is refused without Insert as well.
 
 ### FXNI Nexus Admin (Per 73710475)
 

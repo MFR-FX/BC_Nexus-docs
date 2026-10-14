@@ -7,7 +7,7 @@ permalink: /legal/eula/
 
 **Publisher:** fx-its (Marco Frerix)  
 **Contact:** support@fx-its.de  
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-14
 
 ---
 
@@ -16,6 +16,8 @@ Please read this End User License Agreement ("Agreement") carefully before insta
 ## 1. Scope and Context
 
 The Software is a Microsoft Dynamics 365 Business Central extension distributed through Microsoft AppSource. This Agreement is concluded between fx-its and you, the organization that installs the Software in its Business Central environment ("you"). Microsoft is not a party to this Agreement and has no obligations towards you under it. Your use of Business Central, AppSource and any Microsoft service is governed by your agreements with Microsoft.
+
+The Software includes FXI Core, a library extension by fx-its that is installed together with BC Nexus as its dependency. FXI Core is part of the Software: this Agreement applies to it in the same way, and it is not licensed separately.
 
 ## 2. Grant of License
 

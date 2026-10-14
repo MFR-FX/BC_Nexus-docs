@@ -7,13 +7,15 @@ permalink: /legal/privacy-statement/
 
 **Publisher:** fx-its (Marco Frerix)  
 **Contact:** support@fx-its.de  
-**Last updated:** 2026-09-29
+**Last updated:** 2026-10-14
 
 ---
 
 ## 1. Overview
 
 BC Nexus is a Microsoft Dynamics 365 Business Central extension that enables configurable data exchange (import, export, publish) between Business Central and external systems. This privacy statement explains what data the extension processes, how it is handled, and the rights of data subjects under the GDPR and applicable EU/German law.
+
+BC Nexus is installed together with FXI Core, a library extension by fx-its that holds the endpoint credentials and performs the outgoing HTTP calls. This statement covers FXI Core as part of BC Nexus.
 
 ## 2. Controller and Processor
 
@@ -34,7 +36,7 @@ BC Nexus processes data solely at the direction of the installing organization. 
 - **Business Central table data** — the extension reads from and writes to tables as configured by the administrator (field mappings, endpoints).
 - **OAuth tokens and credentials** — stored in Business Central using the platform's `SecretText` / Isolated Storage mechanisms; never written to plain text or transmitted outside the configured endpoint.
 - **Endpoint configuration** — base URLs, HTTP method settings, and mapping rules are stored in dedicated BC Nexus setup tables within the customer's Business Central tenant.
-- **Transaction and error logs** — entry records (Nexus Entries) are stored in the customer's own database for auditing and troubleshooting.
+- **Transaction and error logs** — entry records (Nexus Entries) and the FXI Core activity log (request URL, status and duration; request and response content only if this is switched on in the FXI Core setup) are stored in the customer's own database for auditing and troubleshooting.
 
 ### Optional Copilot feature (mapping assistant)
 
