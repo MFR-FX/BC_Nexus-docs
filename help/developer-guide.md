@@ -6,7 +6,7 @@ permalink: /help/developer-guide/
 # BC Nexus Developer Guide
 
 **Publisher:** fx-its | **Prefix:** FXNI | **ID Range:** 73710475–73710534  
-**BC Version:** 27.0 (Runtime 16) | **Target:** Cloud (SaaS-first)
+**BC Version:** 28.0 (Runtime 16) | **Target:** Cloud (SaaS-first)
 
 ---
 
@@ -60,7 +60,7 @@ Single-row configuration table. PK is always `'SETUP'`.
 | Field | Type | Purpose |
 |---|---|---|
 | Primary Key | Code[10] | Always `'SETUP'`. |
-| No. Of Retries per Transaction | Integer | How many times the job queue retries a failed transaction before setting Status to Error. |
+| No. Of Retries per Transaction | Integer | How many times the job queue retries a failed transaction before setting Status to Error. Default 3 (InitValue; Install and OnCompanyInitialize create the record with it). 0 switches automatic processing off: the job queue only selects transactions with remaining tries. |
 | Auto. Process Transactions | Boolean | When true, a job queue entry (Codeunit 73710476) runs every minute to process Open transactions. |
 | Enable Attachment Storage | Boolean | Master switch for attachment-mode interfaces. |
 | Max Attachment Size (KB) | Integer | Maximum allowed attachment size. 0 = unlimited. |
@@ -1035,7 +1035,7 @@ Only `procedure` declarations (without the `local` modifier) are part of the sup
 
 | Procedure | Signature | Description |
 |---|---|---|
-| InitializeSetup | `procedure InitializeSetup()` | Creates the setup record with default values if it does not already exist. |
+| InitializeSetup | `procedure InitializeSetup()` | Creates the setup record if it is missing and fills in missing defaults on an existing one: a stored 0 in No. Of Retries per Transaction becomes 3, all other values stay. Install and OnCompanyInitialize only create a missing record. |
 | CreateWebServiceEntry | `procedure CreateWebServiceEntry()` | Publishes the BC Nexus webservice entry. Raises events before and after for extensibility. |
 | CreateJobQueueEntry | `procedure CreateJobQueueEntry()` | Creates the recurring job queue entry for Codeunit 73710476 if Auto. Process Transactions is enabled. |
 | DeleteJobQueueEntry | `procedure DeleteJobQueueEntry()` | Removes all job queue entries for Codeunit 73710476. |

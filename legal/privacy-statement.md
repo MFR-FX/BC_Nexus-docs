@@ -31,30 +31,35 @@ E-mail: support@fx-its.de
 
 ## 3. Data Processed by the Extension
 
-BC Nexus processes data solely at the direction of the installing organization. The extension's own code does not collect, store, or transmit data to fx-its; data leaves the customer's Business Central tenant only through the configured integration targets and through the optional Copilot feature described below. Specifically:
+BC Nexus processes data solely at the direction of the installing organization. It requires FXI Core, a library app from the same publisher that provides the HTTP transport, the endpoint configuration and the activity log. The code of neither app collects, stores, or transmits data to fx-its; data leaves the customer's Business Central tenant only through the configured integration targets and through the optional Copilot feature described below. Specifically:
 
 - **Business Central table data** — the extension reads from and writes to tables as configured by the administrator (field mappings, endpoints).
-- **OAuth tokens and credentials** — stored in Business Central using the platform's `SecretText` / Isolated Storage mechanisms; never written to plain text or transmitted outside the configured endpoint.
-- **Endpoint configuration** — base URLs, HTTP method settings, and mapping rules are stored in dedicated BC Nexus setup tables within the customer's Business Central tenant.
-- **Transaction and error logs** — entry records (Nexus Entries) and the FXI Core activity log (request URL, status and duration; request and response content only if this is switched on in the FXI Core setup) are stored in the customer's own database for auditing and troubleshooting.
+- **Credentials** — the client secret or Basic authentication credentials of an endpoint and the OAuth access token obtained with them are held as `SecretText` in the Isolated Storage of the FXI Core app, per company, not in table fields. They are sent only to the token URL or endpoint URL configured for that endpoint.
+- **Endpoint configuration** — endpoint URLs, authentication type, client ID, token URL, timeouts and additional request and token request headers, including any API key an administrator enters there, are stored in the endpoint table of the FXI Core app; interface definitions, field mappings and filters are stored in BC Nexus tables. Both are part of the customer's Business Central database.
+- **Transaction journal** — every BC Nexus transaction is recorded in the BC Nexus Transaction List with its request and response payload, status and error message, for auditing, retries and troubleshooting.
+- **Attachments** — if attachment storage is enabled in BC Nexus Setup, files received with a transaction are stored in the BC Nexus Attachment table together with file name, content type, size and the ID of the user who processed the transaction, or only as a reference when another extension stores them externally.
+- **Activity log** — requests sent to an endpoint are recorded in the Activity Log of the FXI Core app with endpoint, URL, method, HTTP status, duration, error text and the ID of the user who sent them. Request and response bodies are stored there only when **Store Payloads** is switched on in FXI Core Setup (off by default), and only if a body does not exceed **Max Payload Size (KB)** (64 KB by default); a larger body is not stored. The **Purge** action on the Activity Log deletes entries older than **Retention Days** (30 by default); entries are not deleted automatically.
 
 ### Optional Copilot feature (mapping assistant)
 
-BC Nexus registers a Copilot capability, "FXNI Mapping Assistant", with the Business Central platform. It proposes field mappings for a sample payload that a user pastes on purpose. The feature is only available in Business Central online, and only when an administrator has activated the capability on the Copilot & AI Capabilities page. When a user presses Generate, the extension sends the following to the Azure OpenAI service that Microsoft manages for Business Central (Microsoft-managed resource; the extension carries no endpoint or key of its own):
+BC Nexus registers a Copilot capability with the Business Central platform. It is listed as "Interface Field Mapping" on the **Copilot & agent capabilities** page and proposes field mappings for a sample payload that a user pastes on purpose. The feature is only available in Business Central online. It is registered as generally available and is therefore active by default once BC Nexus is installed; an administrator can deactivate it on the **Copilot & agent capabilities** page at any time.
 
-- the name and number of the target table, the interface direction and the mapping format;
-- the key names (JSON keys or CSV column positions) found in the pasted sample, each with **one** sample value truncated to 60 characters — the complete payload is not sent;
-- the names of the fields of the target table that may be mapped.
+The language model is called through the Azure OpenAI resources that Microsoft manages for Copilot in Business Central (Business Central AI resources). fx-its operates no Azure OpenAI resource for this feature, and the extension carries no endpoint or key of its own. When a user presses Generate, the extension sends:
 
-The result is a proposal only; it is written to the mapping tables only after the user has confirmed it. The processing by Microsoft is governed by your agreements with Microsoft and Microsoft's documentation for Copilot in Business Central. fx-its does not receive the prompt or the answer. Because a pasted sample can contain personal data, the person pasting it should use example data or remove personal data first.
+- fixed instructions that describe the task and the expected answer format — they contain no customer data;
+- the number and caption of the target table, the interface direction (Receive, Send or Publish) and the sample format (JSON or CSV);
+- the key names found in the pasted sample — for JSON the keys of the first record that hold a simple value, for CSV the column headings, or "Column 1", "Column 2" … where the file has no header row or a heading is empty — each with its column position (CSV only) and **one** value from the first data record, truncated to 60 characters. The rest of the sample is not sent;
+- for each field of the target table that may be mapped: its number, its name, its caption in the user's language, its data type, its field class (for example FlowField) and, for option and enum fields, the names of the allowed values.
+
+The answer is a proposal only and is held in a temporary list; a discarded proposal is not stored. When the user confirms it with Keep it, only the accepted mapping lines are written to the field mapping: for JSON the key name, for CSV the column position, each with its target field and the Mandatory, Validate Field and Skip If Empty settings. The sample values, the rest of the pasted sample and the model's confidence and reasoning are never stored. The processing by Microsoft — including the geography in which it takes place, which administrators control with the **Allow data movement** setting on the same page — is governed by your agreements with Microsoft and Microsoft's documentation for Copilot in Business Central. fx-its does not receive the prompt or the answer. Because a pasted sample can contain personal data, the person pasting it should use example data or remove personal data first.
 
 ## 4. Data Retention
 
-All data processed by BC Nexus remains within the customer's Business Central environment. Retention periods are governed by the customer's own policies and Business Central's built-in mechanisms. No data from the extension's own code is sent to fx-its; the only channel from the platform to an fx-its-operated system is the diagnostics telemetry described in Section 5, whose retention is stated there.
+All data that BC Nexus and FXI Core store remains within the customer's Business Central environment, except attachment content that another extension stores externally (Section 3). BC Nexus does not delete entries in its transaction journal or stored attachments automatically and does not yet offer a retention policy or a purge function for them; these records, including the request and response payloads they hold, remain in the customer's database. For the activity log of FXI Core, see Retention Days in Section 3. Retention of all other data follows the customer's own policies. No data from the code of either app is sent to fx-its; the only channel from the platform to an fx-its-operated system is the diagnostics telemetry described in Section 5, whose retention is stated there.
 
 ## 5. Data Sharing and Third-Party Transfers
 
-BC Nexus makes HTTP calls to external endpoints **only** as configured explicitly by the customer administrator. The extension's own code does not analyze or share the customer's Business Central data with fx-its or third parties.
+Apart from the Copilot feature described in Section 3, BC Nexus — through FXI Core — makes HTTP calls to external endpoints **only** as configured explicitly by the customer administrator. The code of neither app analyzes or shares the customer's Business Central data with fx-its or third parties.
 
 **Telemetry.**
 The Business Central platform itself sends extension telemetry — errors, lifecycle events, and web service call metadata including tenant and environment identifiers, no business data — to the publisher's Application Insights resource in the Azure region Germany West Central. This is a platform mechanism, configured via `applicationInsightsConnectionString` in the app manifest, not code added by BC Nexus. Purpose: diagnostics and customer support. Retention: 30 days, after which the data is deleted. No record contents of the customer's Business Central data are transmitted through this channel.
@@ -68,7 +73,7 @@ Customer data processed through integrations is processed by the customer on its
 
 ## 7. Security Measures
 
-- Credentials are stored using Business Central's `SecretText` and Isolated Storage — not in plain database fields.
+- Client secrets, Basic authentication credentials and access tokens are stored as `SecretText` in Isolated Storage, not in table fields. Values an administrator enters as additional request or token request headers, for example an API key in an Authorization header, are stored in plain text in the endpoint table of FXI Core.
 - All HTTP communication uses the endpoint URLs and TLS settings as configured by the customer.
 - Source code is not exposed in the distributed symbol file (`resourceExposurePolicy` is restricted).
 

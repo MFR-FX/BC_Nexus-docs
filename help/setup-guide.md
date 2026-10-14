@@ -11,7 +11,7 @@ _Step-by-step guide to configure your first interfaces. No AL development needed
 
 ## Prerequisites
 
-- Business Central 27.0 or later (SaaS or on-premise)
+- Business Central 28.0 or later (SaaS or on-premise)
 - BC Nexus extension installed (`.app` file or published via AL Language extension)
 - Admin access to the BC company
 
@@ -74,9 +74,9 @@ A few points worth knowing before you assign these:
 
 Search for **BC Nexus Setup** in the BC search bar.
 
-The Install codeunit creates a default Setup record automatically on first install. You will see:
+BC Nexus creates a default Setup record automatically on install and in every company created afterwards. You will see:
 
-- **No. Of Retries per Transaction** — how many times the job queue retries a failed transaction (default: 3)
+- **No. Of Retries per Transaction** — how many times the job queue retries a failed transaction (default: 3). With 0 the job queue processes nothing automatically; **Initialize Setup** puts a 0 back to 3
 - **Auto. Process Transactions** — enable this to have a Job Queue Entry process open transactions automatically
 
 The Setup page also contains:
