@@ -70,16 +70,19 @@ entirely — there is no error to see, the operation simply does not exist.
 | `FXNINexusWebservice_SendWithOptions` | `interfaceCode`, `requestData` |
 | `FXNINexusWebservice_Publish` | `interfaceCode`, `requestData` |
 | `FXNINexusWebservice_ReceiveAttachment` | `interfaceCode`, `recordKey`, `attachmentName`, `contentType`, `fileExtension`, `base64Content` |
+| `FXNINexusWebservice_ReceiveWithMetadataGetEntryNo` | `interfaceCode`, `requestData`, `correlationId`, `idempotencyKey`, `externalMessageId`, `contractVersion` |
 
 The first four rows were verified against the published service's `$metadata`.
 `SendWithOptions` is new in this version and has **not** been read back from a running
 environment yet — it carries value parameters only, which is what keeps a procedure in the
-metadata, but treat the row as expected rather than confirmed until `$metadata` says so.
+metadata, but treat the row as expected rather than confirmed until `$metadata` says so. The
+same holds for `ReceiveWithMetadataGetEntryNo`, which is newer still.
 
 **`ReceiveAndGetTransactionEntryNo` and `ReceiveWithMetadata` are AL-only.** Both carry
 `var TransactionEntryNo: Integer`. They are documented below because another extension can call
-them, and an external system cannot — such a caller uses `Receive` and correlates through its
-own identifiers instead.
+them, and an external system cannot. An external system that needs the tracing fields or the
+entry number calls [`ReceiveWithMetadataGetEntryNo`](#receivewithmetadatagetentryno), which
+returns the entry number instead.
 
 To see the list for a specific environment rather than trusting this table, run the
 **BC Webservice Smoke** workflow: its first step prints every action of the published service
@@ -114,7 +117,10 @@ PROCEDURE Receive(InterfaceCode: Code[20]; RequestData: Text): Boolean
 
 **Errors:**
 - Interface not found → Error "Interface definition 'X' does not exist."
-- Interface blocked → Error "Interface 'X' is blocked and cannot process requests."
+- Interface blocked → Error "Interface 'X' is blocked and does not process transactions. Only an administrator of the Business Central environment can unblock it."
+- Interface with **Attachment Mode** while **Enable Attachment Storage** is off in BC Nexus Setup →
+  Error, and no transaction is created. Such a request could only fail later in processing, so it
+  is refused while the caller is still waiting for the answer.
 
 ---
 
@@ -174,6 +180,49 @@ PROCEDURE ReceiveWithMetadata(
 
 ---
 
+### <a id="receivewithmetadatagetentryno"></a>ReceiveWithMetadataGetEntryNo
+
+`ReceiveWithMetadata` for callers over OData: the same call, with the Entry No. as the return
+value instead of a `var` parameter.
+
+```
+PROCEDURE ReceiveWithMetadataGetEntryNo(
+    InterfaceCode: Code[20];
+    RequestData: Text;
+    CorrelationId: Text[100];
+    IdempotencyKey: Text[100];
+    ExternalMessageId: Text[100];
+    ContractVersion: Code[20]
+): Integer
+```
+
+**Parameters:** as `ReceiveWithMetadata`, without `TransactionEntryNo`. Any of the four tracing
+fields may be empty.
+
+**Returns:**
+
+| Value | Meaning |
+|---|---|
+| Entry No. of a new transaction | The payload was queued, as with `Receive` |
+| Entry No. of an existing transaction | `IdempotencyKey` was set and a transaction with the same key already exists for this interface; nothing new was created |
+| `0` | An extension's `OnBeforeReceive` subscriber took the call over; no transaction was created in BC Nexus |
+
+**On the wire** (OData returns the number in `value`):
+
+```json
+{ "interfaceCode": "CURRENCYIMPORT", "requestData": "{...}", "correlationId": "CORR-001",
+  "idempotencyKey": "ORDER-4711", "externalMessageId": "", "contractVersion": "1.0" }
+```
+
+```json
+{ "value": 4711 }
+```
+
+Errors, gates and events are those of `ReceiveWithMetadata`, which this procedure calls.
+`ReceiveWithMetadata` itself is unchanged.
+
+---
+
 ### ReceiveAttachment
 
 Convenience method to send a file attachment through an Attachment Mode Receive interface.
@@ -189,7 +238,16 @@ PROCEDURE ReceiveAttachment(
 ): Boolean
 ```
 
-Builds the required JSON payload internally and calls `Receive()`. The interface must have **Attachment Mode** enabled.
+Builds the required JSON payload internally and calls `Receive()`. The interface must have **Attachment Mode** enabled:
+a call for an interface without it is refused at once with an error, and no transaction is created.
+The checks of `Receive` apply as well, including the refusal while attachment storage is switched off.
+
+- `ContentType` may be left empty; the attachment is then stored as `application/octet-stream`.
+- `FileExtension` may be written with or without the leading dot (`pdf` or `.pdf`). It only matters
+  for an attachment without a name, which is downloaded as `attachment.pdf` in both cases.
+- **Max Attachment Size (KB)** is compared with the exact size of the decoded content: a file of
+  exactly the configured size is accepted, one byte more is refused. The stored **File Size (Bytes)**
+  is that exact size.
 
 **JSON payload structure (generated internally):**
 ```json
@@ -232,10 +290,47 @@ A receiving system written against the array reads `value` instead of the body r
 partner system whose inbound format is fixed to the array, sends `"envelope": false` over `SendWithOptions` to keep
 getting the bare array. See [Response envelope](#response-envelope-send--publish).
 
+#### <a id="delivery-and-messageid-send"></a>Delivery is at least once — `messageId`
+
+A Send is delivered **at least once, not exactly once**. The partner can have accepted the
+request while the run in Business Central fails afterwards — a lock on the transaction row, an
+extension's `OnAfterProcessTransaction` subscriber that raises an error. The run is then rolled
+back, and on the processing job the transaction stays due: the next run sends the same rows
+again. Business Central cannot tell whether the first request arrived.
+
+So the envelope of a Send carries **`messageId`**: the Entry No. of the transaction, as a JSON
+number, the same on every attempt of that transaction. A receiving system that must not process
+a delivery twice keeps the `messageId` values it has accepted from that sender and ignores a
+repeat. A new call of
+`Send` or `SendWithOptions` — for example a retry by a caller who got an error — is a new
+transaction with a new `messageId`; telling such a call apart from a genuinely new one is up to
+the record data.
+
+- `messageId` is unique **only within one company of one Business Central environment**. The
+  Entry No. is numbered per company, so two companies — or a production environment and a
+  sandbox copied from it — send the same numbers for different transactions. A receiver that
+  takes Sends from more than one of them deduplicates on `messageId` together with the sender:
+  give each company and environment its own endpoint (its own URL or its own credentials) and
+  keep the accepted `messageId` values per sender. Deduplicated on `messageId` alone, the second
+  company's transaction is dropped as a repeat of the first one's.
+- `messageId` is the **last** member of the envelope; every member that was there before keeps
+  its name, type and place. A consumer that ignores unknown members needs no change.
+- It is only on the envelope. With `"envelope": false` the payload is the bare array, byte for
+  byte as before — a partner on the bare array has no `messageId` and has to deduplicate on the
+  record data itself.
+- A payload supplied by an `OnBeforeBuildSendPayload` subscriber is sent as the subscriber built
+  it; it carries a `messageId` only if the subscriber puts one in.
+- `Publish` does not carry it: its answer goes back to the caller that asked for it.
+- A processed transaction that an administrator puts back to Open with **Reset Status** is sent
+  again with its old `messageId`. A receiver that deduplicates treats it as the repeat it is; a
+  delivery that has to be accepted as new needs a new `Send` call.
+
 **Errors:**
 - Interface not found / blocked → Error
 - Interface not of type Send → Error "Interface 'X' is not of type 'Send'."
-- HTTP request failed → Error with status code and response body
+- HTTP request failed → Error with status code and response body. The transaction row ends on
+  status Error, and the endpoint's complete response body is stored in its **Response** field —
+  the error message holds only as much of it as fits into 2048 characters
 - More records than the interface's **Max Page Size** and no paging asked for → Error, see
   [The cap always applies](#the-cap-always-applies)
 
@@ -467,6 +562,9 @@ pages and the pages no longer describe one result set.
 
 ## <a id="response-envelope-send--publish"></a>Response envelope (Send / Publish)
 
+> On **Send** the envelope also carries `messageId`, the Entry No. of the transaction, as its
+> last member — see [Delivery is at least once](#delivery-and-messageid-send).
+
 **This is a breaking change against every version before it, and it is frozen from the first
 AppSource release on.** Until now `Publish` returned, and `Send` POSTed, a bare JSON array. A bare
 array cannot say whether it is the whole answer — every consumer that received one had to assume
@@ -633,6 +731,11 @@ member is the array of record objects that used to be the whole payload:
 }
 ```
 
+On **Send** the envelope ends with one more member, `"messageId": 4711` — the Entry No. of the
+transaction, the same on every attempt and unique only within one company of one environment.
+See [Delivery is at least once](#delivery-and-messageid-send). `Publish` and the bare array of
+`"envelope": false` do not carry it.
+
 The rules for the objects inside `value` are unchanged:
 
 - If **Json Key** is empty for a field mapping line, the **Field Name** is used as the key
@@ -645,6 +748,13 @@ The rules for the objects inside `value` are unchanged:
 ## Error Responses
 
 All errors follow the standard BC error response format. The BC Nexus webservice calls `Error()` with a Label text. The transaction is created with Status = Error and the error message stored in `Error Message` (Text[2048]).
+
+When the endpoint of a Send answers with an error, the transaction's **Response** field holds the
+endpoint's response body — on every route: `Send`/`SendWithOptions`, Process Manually, and the
+processing job. The processing job ends such a transaction at once, without using further tries,
+when the endpoint refused it with a **4xx** status other than **408** and **429**: the same request
+would be refused the same way. 408, 429, every 5xx and a request that got no answer at all are
+retried with the growing pause of the job.
 
 ---
 

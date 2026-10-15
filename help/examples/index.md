@@ -149,7 +149,8 @@ Daraus folgt für jeden externen Aufrufer:
   ausschließlich in der Transaktionsliste sichtbar.
 - **Synchron abgewiesen wird nur, was schon der Webservice prüft:** Schnittstelle existiert
   nicht (*„Interface definition '…' does not exist."*), Schnittstelle ist gesperrt
-  (*„Interface '…' is blocked and cannot process requests."*), oder der Typ passt nicht
+  (*„Interface '…' is blocked and does not process transactions. Only an administrator of the
+  Business Central environment can unblock it."*), oder der Typ passt nicht
   (*„Interface '…' is not of type 'Receive'."*). Diese drei Fälle kommen als HTTP-Fehler zurück.
 - **Ist *Transakt. automatisch verarbeiten* aus**, bleibt jede Transaktion auf **Offen** stehen, bis
   jemand in der Transaktionsliste **Manuell verarbeiten** wählt. Für einen Testlauf ist das die

@@ -76,7 +76,7 @@ Search for **BC Nexus Setup** in the BC search bar.
 
 BC Nexus creates a default Setup record automatically on install and in every company created afterwards. You will see:
 
-- **No. Of Retries per Transaction** — how many times the job queue retries a failed transaction (default: 3). With 0 the job queue processes nothing automatically; **Initialize Setup** puts a 0 back to 3
+- **No. Of Retries per Transaction** — how many attempts the job queue makes for a transaction that keeps failing (default: 3), with a pause that grows from one minute up to an hour between them. Not every failure spends a try: a transaction whose interface is **Blocked** waits untouched until you unblock it, and a configuration error on the interface or a send the partner refuses with a 4xx status (other than 408 and 429) moves the transaction to **Error** at once, without further attempts. The partner's answer to a failed send is kept in the transaction's **Response**. With 0 the job queue processes nothing automatically; **Initialize Setup** puts a 0 back to 3
 - **Auto. Process Transactions** — enable this to have a Job Queue Entry process open transactions automatically
 
 The Setup page also contains:
