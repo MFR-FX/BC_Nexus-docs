@@ -7,7 +7,7 @@ permalink: /legal/impressum/
 
 **Anbieter:** fx-its (Marco Frerix)  
 **Kontakt:** mfr@fx-its.de  
-**Stand:** 2026-10-07
+**Stand:** 2026-10-16
 
 *This page is the provider identification required by German law (§ 5 DDG) and is therefore written in German. For product support see [Support]({{ site.baseurl }}/support/).*
 
@@ -25,9 +25,9 @@ Deutschland
 E-Mail: mfr@fx-its.de  
 Produktsupport: support@fx-its.de (siehe [Support]({{ site.baseurl }}/support/))
 
-## Umsatzsteuer
+## Umsatzsteuer-ID
 
-Von der Umsatzsteuer befreit gemäß § 19 UStG. Eine Umsatzsteuer-Identifikationsnummer nach § 27a UStG wird daher nicht ausgewiesen.
+Umsatzsteuer-Identifikationsnummer gemäß § 27a UStG: DE460859644
 
 ## Registereintrag
 
