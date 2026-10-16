@@ -7,7 +7,7 @@ permalink: /legal/privacy-statement/
 
 **Publisher:** fx-its (Marco Frerix)  
 **Contact:** support@fx-its.de  
-**Last updated:** 2026-10-14
+**Last updated:** 2026-10-16
 
 ---
 
@@ -23,7 +23,7 @@ Two roles have to be told apart.
 
 **Customer data.** For personal data processed through BC Nexus integrations, the controller is the organization that installs and operates the extension in its Business Central environment. fx-its does not access data in that environment. Should fx-its access it in the course of support, this happens only as a processor under a data processing agreement in accordance with Article 28 GDPR, to be concluded before access.
 
-**Diagnostics telemetry and support contact.** For the telemetry described in Section 5 and for personal data you send us when you contact support, the controller is:
+**Diagnostics telemetry, support, sales contacts and documentation website.** For the telemetry described in Section 5 and for the personal data described in Section 6 (support requests, enquiries through AppSource "Contact me", offers and contracts, visits to this documentation website), the controller is:
 
 fx-its — Marco Frerix  
 Arlberger Straße 32, 47249 Duisburg, Germany  
@@ -55,7 +55,7 @@ The answer is a proposal only and is held in a temporary list; a discarded propo
 
 ## 4. Data Retention
 
-All data that BC Nexus and FXI Core store remains within the customer's Business Central environment, except attachment content that another extension stores externally (Section 3). BC Nexus does not delete entries in its transaction journal or stored attachments automatically and does not yet offer a retention policy or a purge function for them; these records, including the request and response payloads they hold, remain in the customer's database. For the activity log of FXI Core, see Retention Days in Section 3. Retention of all other data follows the customer's own policies. No data from the code of either app is sent to fx-its; the only channel from the platform to an fx-its-operated system is the diagnostics telemetry described in Section 5, whose retention is stated there.
+All data that BC Nexus and FXI Core store remains within the customer's Business Central environment, except attachment content that another extension stores externally (Section 3). BC Nexus does not delete entries in its transaction journal or stored attachments automatically and does not yet offer a retention policy or a purge function for them; these records, including the request and response payloads they hold, remain in the customer's database. For the activity log of FXI Core, see Retention Days in Section 3. Retention of all other data follows the customer's own policies. No data from the code of either app is sent to fx-its; the only channel from the platform to an fx-its-operated system is the diagnostics telemetry described in Section 5, whose retention is stated there. For the data fx-its processes as controller in support and sales, see Section 6.
 
 ## 5. Data Sharing and Third-Party Transfers
 
@@ -64,34 +64,55 @@ Apart from the Copilot feature described in Section 3, BC Nexus — through FXI 
 **Telemetry.**
 The Business Central platform itself sends extension telemetry — errors, lifecycle events, and web service call metadata including tenant and environment identifiers, no business data — to the publisher's Application Insights resource in the Azure region Germany West Central. This is a platform mechanism, configured via `applicationInsightsConnectionString` in the app manifest, not code added by BC Nexus. Purpose: diagnostics and customer support. Retention: 30 days, after which the data is deleted. No record contents of the customer's Business Central data are transmitted through this channel.
 
-## 6. Legal Bases
+## 6. Support, Sales Contacts and Documentation Website
 
-- **Article 6(1)(b) GDPR** (performance of a contract): handling of support requests and communication with you about the use of the Software.
-- **Article 6(1)(f) GDPR** (legitimate interests): diagnostics telemetry — our interest is the stable operation of the Software, the analysis of errors and effective support. Telemetry does not contain business data. You can object at any time (see Section 8).
+**Support requests.** When you write to support@fx-its.de or open a request in the ticket portal, we process your name, e-mail address, organization, the content of your request and any attachments, as well as the history of the request. Every support e-mail is logged as a request in our ticket system, Jira Service Management, operated by Atlassian (Atlassian Pty Ltd and Atlassian US, Inc.) as our processor. Our e-mail is provided by Microsoft 365 (Microsoft Ireland Operations Limited) as our processor. Purpose: handling your request and providing the support owed under the contract.
+
+**Enquiries through "Contact me".** When you press "Contact me" on the AppSource listing of BC Nexus, Microsoft passes the contact details you entered there to us through Microsoft Partner Center (source of these data, Article 14(2)(f) GDPR) — typically name, e-mail address, phone number, organization, country and job title. Purpose: answering your enquiry and sending you an offer. We process offers, order confirmations and invoices in our offer and accounting software; its provider acts as our processor.
+
+**Documentation website.** This documentation website is hosted on GitHub Pages by GitHub, Inc. When you open a page, GitHub processes your IP address and technical request data (server log) to deliver the page and to protect its service; fx-its has no access to these logs. The website sets no cookies of its own and uses no analytics or tracking.
+
+**Transfers to third countries.** Atlassian, Microsoft and GitHub may process data in the USA and other countries outside the EU/EEA. Atlassian, Microsoft and GitHub (as a Microsoft subsidiary) are certified under the EU-U.S. Data Privacy Framework, for which the European Commission has adopted an adequacy decision (Article 45 GDPR); in addition, their data processing agreements contain the EU Standard Contractual Clauses (Article 46(2)(c) GDPR), which also cover transfers to countries without an adequacy decision.
+
+**Retention.**
+
+- Enquiries that do not lead to a contract: deleted six months after the last contact.
+- Support requests: deleted three years after the end of the calendar year in which the request was closed (the regular limitation period, Section 195 BGB), unless they are needed longer to assert or defend legal claims or are business letters that must be retained under Section 257 HGB (for example a notice of defect or a termination), which are retained for six years.
+- Offers, order confirmations, invoices and other business letters: retained for the statutory periods of Section 257 HGB and Section 147 AO (six years for business letters, eight years for accounting vouchers such as invoices), then deleted.
+- Website server logs: retained by GitHub under its own policies; fx-its does not store them.
+
+**Provision of data and automated decisions.** You are not obliged to provide personal data. Without your contact details and the content of your request, however, we cannot answer an enquiry, send an offer or handle a support request, and without the data needed for the contract we cannot conclude it. fx-its makes no decisions based solely on automated processing, including profiling (Article 22 GDPR).
+
+## 7. Legal Bases
+
+- **Article 6(1)(b) GDPR** (performance of a contract and pre-contractual measures at your request): handling of support requests, answering enquiries through "Contact me", offers, order processing and communication with you about the use of the Software.
+- **Article 6(1)(c) GDPR** (legal obligation): retention of business letters and accounting records under Section 257 HGB and Section 147 AO.
+- **Article 6(1)(f) GDPR** (legitimate interests): support requests from persons who are not themselves our contractual partner (for example employees of a customer) — our interest is handling the request of the customer they act for; delivery and security of the documentation website.
+- **Article 6(1)(f) GDPR** (legitimate interests): diagnostics telemetry — our interest is the stable operation of the Software, the analysis of errors and effective support. Telemetry does not contain business data. You can object at any time (see Section 9).
 
 Customer data processed through integrations is processed by the customer on its own legal basis as controller.
 
-## 7. Security Measures
+## 8. Security Measures
 
 - Client secrets, Basic authentication credentials and access tokens are stored as `SecretText` in Isolated Storage, not in table fields. Values an administrator enters as additional request or token request headers, for example an API key in an Authorization header, are stored in plain text in the endpoint table of FXI Core.
 - All HTTP communication uses the endpoint URLs and TLS settings as configured by the customer.
 - Source code is not exposed in the distributed symbol file (`resourceExposurePolicy` is restricted).
 
-## 8. GDPR Rights
+## 9. GDPR Rights
 
 Data subjects whose personal data is processed through a BC Nexus integration may exercise their rights (access, rectification, erasure, restriction of processing, portability, objection) by contacting the data controller — i.e., the organization that operates the Business Central environment. fx-its is not in a position to respond to such requests directly unless contracted as a processor; fx-its will forward requests it receives to the customer where this is possible.
 
 For data that fx-its processes as controller (Section 2), you can exercise these rights towards fx-its via support@fx-its.de. You have the right to object to processing based on Article 6(1)(f) GDPR on grounds relating to your particular situation.
 
-## 9. Right to Lodge a Complaint
+## 10. Right to Lodge a Complaint
 
 You have the right to lodge a complaint with a data protection supervisory authority. The authority responsible for fx-its is: Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen (LDI NRW), https://www.ldi.nrw.de.
 
-## 10. Changes to This Statement
+## 11. Changes to This Statement
 
 fx-its may update this privacy statement. The current version is always available at <https://mfr-fx.github.io/BC_Nexus-docs/legal/privacy-statement/>.
 
-## 11. Contact
+## 12. Contact
 
 Questions about this privacy statement:  
 **fx-its** — support@fx-its.de

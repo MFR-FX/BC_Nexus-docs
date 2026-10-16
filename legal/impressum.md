@@ -23,6 +23,7 @@ Deutschland
 ## Kontakt
 
 E-Mail: mfr@fx-its.de  
+Ticketportal: https://fx-its.atlassian.net/servicedesk/customer/portal/1  
 Produktsupport: support@fx-its.de (siehe [Support]({{ site.baseurl }}/support/))
 
 ## Umsatzsteuer-ID
@@ -57,4 +58,4 @@ Mein Angebot enthält Links zu externen Websites Dritter, auf deren Inhalte ich 
 
 ---
 
-Weitere Rechtstexte: [EULA]({{ site.baseurl }}/legal/eula/) · [Privacy Statement]({{ site.baseurl }}/legal/privacy-statement/) · [Limited Warranty]({{ site.baseurl }}/warranty/)
+Weitere Rechtstexte: [EULA]({{ site.baseurl }}/legal/eula/) · [Privacy Statement]({{ site.baseurl }}/legal/privacy-statement/) · [Warranty]({{ site.baseurl }}/warranty/)

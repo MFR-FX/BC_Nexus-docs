@@ -9,7 +9,7 @@ permalink: /support/
 **Support email:** support@fx-its.de  
 **Support portal:** https://fx-its.atlassian.net/servicedesk/customer/portal/1  
 **Documentation:** https://mfr-fx.github.io/BC_Nexus-docs/help/  
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-16
 
 ---
 
@@ -51,12 +51,10 @@ On your first request you create an account with your email address; afterwards 
 
 | Issue type | Target first response |
 |------------|----------------------|
-| Critical bug (extension not loading / data loss risk) | 2 business days |
-| Standard bug (documented feature broken) | 5 business days |
 | Support / configuration question | 5 business days |
 | Feature request | Reviewed, no guaranteed timeline |
 
-Response times are best-effort commitments. For customers with active support agreements, different SLAs apply.
+These response times are targets for support requests. Defects in BC Nexus (extension not loading, documented feature broken, data loss risk) are handled under [Warranty]({{ site.baseurl }}/warranty/). For customers with active support agreements, different SLAs apply.
 
 ## Included Support and Services
 
@@ -66,9 +64,9 @@ Beyond the included hours, support is billed at **120 EUR per hour**, either per
 
 ---
 
-## Warranty Coverage
+## Defects
 
-For the first 90 days after installation, bugs in core functionality are covered under the [Limited Warranty]({{ site.baseurl }}/warranty/). After that period, support continues on a best-effort basis.
+Defects in BC Nexus are remedied for the entire term of your license, not only for a limited period, and never count against your support hours — see [Warranty]({{ site.baseurl }}/warranty/). The response times above apply to support requests; for defects, the target times on the Warranty page apply.
 
 ---
 
