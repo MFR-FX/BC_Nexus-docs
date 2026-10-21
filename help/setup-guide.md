@@ -80,8 +80,21 @@ BC Nexus creates a default Setup record automatically on install and in every co
 - **Auto. Process Transactions** — enable this to have a Job Queue Entry process open transactions automatically
 
 The Setup page also contains:
+- **License** — the license status of this environment and the field for the license key (see below)
 - **Endpoint Definitions** (sublist) — outbound connection credentials
 - **Interface Definitions** (sublist) — all configured interfaces
+
+### License
+
+BC Nexus is licensed per production environment ([EULA]({{ site.baseurl }}/legal/eula/), Sections 2 and 4). The **License** group on the Setup page shows:
+
+- **License Status** — *Sandbox*: this is a sandbox, no key is needed and nothing is checked. *Licensed*: a valid key is stored. *Grace Period*: the environment runs without a valid key until the date in **Processing Until** and is then blocked from processing transactions. *Not Active*: the license check is not enabled in this version. *Check Failed*: the check itself could not be carried out; processing is not blocked. Any other status names what is wrong with the stored key (none, expired, issued for another tenant, environment or product) and means that processing is blocked.
+- **Processing Until** — the last day on which transactions are processed without a valid key: 30 days after the first processing run without one, or 30 days after the stored key expired.
+- **Licensed Until** and **Contract No.** — read from the stored key.
+- **Tenant ID** and **Environment Name** — what a key for this environment has to be issued for. Pass both on to fx-its when ordering a key. A renamed or copied production environment has a different name and needs its own key.
+- **License Key** — paste the key fx-its issued. It is checked when you leave the field: a key that does not verify, or that was issued for another tenant, environment or product, is refused and nothing changes. The key is stored once for the whole environment, all companies included. Clear the field to remove it. Entering or removing a key needs the write right on the BC Nexus setup (BC Nexus Admin); a user who may only read the setup sees the field but gets an error when changing it. Removing an expired key does not start a new grace period.
+
+What is blocked without a valid license, once the grace period is over: the processing job, **Process Manually**, `Send` and `Publish` on the web service, and the processing procedures of the public API. What keeps working: receiving requests (`Receive`, `ReceiveAttachment` — the transactions wait as *Open* and are processed once a key is entered), the setup pages, **Test Connection**, and the transaction journal. The processing job queue entry does not go on *Error*; it skips its runs and resumes by itself. An administrator who opens the Setup page or the Transaction List during the grace period sees a notification with the date.
 
 ---
 
